@@ -65,6 +65,15 @@ categoriesController.list = function(req, res, next) {
 			return next(err);
 		}
 
+		data.categories.forEach(function(category) {
+			if (category && Array.isArray(category.posts) && category.posts.length) {
+				category.teaser = {
+					url: nconf.get('relative_path') + '/topic/' + category.posts[0].topic.slug + '/' + category.posts[0].index,
+					timestampISO: category.posts[0].relativeTime
+				};
+			}
+		});
+
 		data.title = '[[pages:categories]]';
 		if (req.path.startsWith('/api/categories') || req.path.startsWith('/categories')) {
 			data.breadcrumbs = helpers.buildBreadcrumbs([{text: data.title}]);
@@ -81,7 +90,8 @@ categoriesController.list = function(req, res, next) {
 
 categoriesController.get = function(req, res, callback) {
 	var cid = req.params.category_id,
-		page = parseInt(req.query.page, 10) || 1,
+		currentPage = parseInt(req.query.page, 10) || 1,
+		pageCount = 1,
 		userPrivileges;
 
 	if ((req.params.topic_index && !utils.isNumber(req.params.topic_index)) || !utils.isNumber(cid)) {
@@ -120,13 +130,13 @@ categoriesController.get = function(req, res, callback) {
 			var settings = results.userSettings;
 			var topicIndex = utils.isNumber(req.params.topic_index) ? parseInt(req.params.topic_index, 10) - 1 : 0;
 			var topicCount = parseInt(results.categoryData.topic_count, 10);
-			var pageCount = Math.max(1, Math.ceil(topicCount / settings.topicsPerPage));
+			pageCount = Math.max(1, Math.ceil(topicCount / settings.topicsPerPage));
 
 			if (topicIndex < 0 || topicIndex > Math.max(topicCount - 1, 0)) {
 				return helpers.redirect(res, '/category/' + cid + '/' + req.params.slug + (topicIndex > topicCount ? '/' + topicCount : ''));
 			}
 
-			if (settings.usePagination && (page < 1 || page > pageCount)) {
+			if (settings.usePagination && (currentPage < 1 || currentPage > pageCount)) {
 				return callback();
 			}
 
@@ -134,7 +144,7 @@ categoriesController.get = function(req, res, callback) {
 				topicIndex = Math.max(topicIndex - (settings.topicsPerPage - 1), 0);
 			} else if (!req.query.page) {
 				var index = Math.max(parseInt((topicIndex || 0), 10), 0);
-				page = Math.ceil((index + 1) / settings.topicsPerPage);
+				currentPage = Math.ceil((index + 1) / settings.topicsPerPage);
 				topicIndex = 0;
 			}
 
@@ -148,7 +158,7 @@ categoriesController.get = function(req, res, callback) {
 				set = 'cid:' + cid + ':tids:posts';
 			}
 
-			var start = (page - 1) * settings.topicsPerPage + topicIndex,
+			var start = (currentPage - 1) * settings.topicsPerPage + topicIndex,
 				stop = start + settings.topicsPerPage - 1;
 
 			next(null, {
@@ -248,12 +258,12 @@ categoriesController.get = function(req, res, callback) {
 			return callback(err);
 		}
 
-		data.currentPage = page;
 		data['feeds:disableRSS'] = parseInt(meta.config['feeds:disableRSS'], 10) === 1;
 		data.rssFeedUrl = nconf.get('relative_path') + '/category/' + data.cid + '.rss';
-		data.pagination = pagination.create(data.currentPage, data.pageCount);
 		data.title = data.name;
+		data.pagination = pagination.create(currentPage, pageCount);
 		data.pagination.rel.forEach(function(rel) {
+			rel.href = nconf.get('url') + '/category/' + data.slug + rel.href;
 			res.locals.linkTags.push(rel);
 		});
 

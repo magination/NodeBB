@@ -1,5 +1,5 @@
 {
-    "banned": "Gebannt",
+    "banned": "Gesperrt",
     "offline": "offline",
     "username": "Nutzername",
     "joindate": "Registriert vor",
@@ -51,6 +51,7 @@
     "confirm_password": "Passwort wiederholen",
     "password": "Passwort",
     "username_taken_workaround": "Der gewünschte Benutzername ist bereits vergeben, deshalb haben wir ihn ein wenig verändert. Du bist jetzt unter dem Namen <strong>%1</strong> bekannt.",
+    "password_same_as_username": "Dein Passwort entspricht deinem Benutzernamen, bitte wähle ein anderes Passwort.",
     "upload_picture": "Bild hochladen",
     "upload_a_picture": "Ein Bild hochladen",
     "remove_uploaded_picture": "Hochgeladenes Bild entfernen",
@@ -87,5 +88,8 @@
     "follow_topics_you_create": "Themen folgen, die du erstellst",
     "grouptitle": "Wähle den anzuzeigenden Gruppen Titel aus",
     "no-group-title": "Kein Gruppentitel",
-    "select-skin": "Einen Skin auswählen"
+    "select-skin": "Einen Skin auswählen",
+    "sso.title": "Einmalanmeldungsdienste",
+    "sso.associated": "Verbunden mit",
+    "sso.not-associated": "Hier klicken um Dich mit %1 zu verbinden"
 }

@@ -135,55 +135,67 @@ define('forum/topic/postTools', ['share', 'navigator', 'components', 'translator
 	}
 
 	function onReplyClicked(button, tid, topicName) {
-		var selectionText = '',
-			selection = window.getSelection ? window.getSelection() : document.selection.createRange();
+		showStaleWarning(function(proceed) {
+			console.log('proceed is', proceed);
+			if (!proceed) {
+				var selectionText = '',
+					selection = window.getSelection ? window.getSelection() : document.selection.createRange();
 
-		if ($(selection.baseNode).parents('[component="post/content"]').length > 0) {
-			selectionText = selection.toString();
-		}
+				if ($(selection.baseNode).parents('[component="post/content"]').length > 0) {
+					selectionText = selection.toString();
+				}
 
-		var username = getUserName(selectionText ? $(selection.baseNode) : button);
-		if (getData(button, 'data-uid') === '0') {
-			username = '';
-		}
-		if (selectionText.length) {
-			$(window).trigger('action:composer.addQuote', {
-				tid: tid,
-				slug: ajaxify.data.slug,
-				index: getData(button, 'data-index'),
-				pid: getData(button, 'data-pid'),
-				topicName: topicName,
-				username: username,
-				text: selectionText
-			});
-		} else {
-			$(window).trigger('action:composer.post.new', {
-				tid: tid,
-				pid: getData(button, 'data-pid'),
-				topicName: topicName,
-				text: username ? username + ' ' : ''
-			});
-		}
+				var username = getUserName(selectionText ? $(selection.baseNode) : button);
+				if (getData(button, 'data-uid') === '0') {
+					username = '';
+				}
+
+				var toPid = button.is('[component="post/reply"]') ? getData(button, 'data-pid') : null;
+
+				if (selectionText.length) {
+					$(window).trigger('action:composer.addQuote', {
+						tid: tid,
+						slug: ajaxify.data.slug,
+						index: getData(button, 'data-index'),
+						pid: toPid,
+						topicName: topicName,
+						username: username,
+						text: selectionText
+					});
+				} else {
+					$(window).trigger('action:composer.post.new', {
+						tid: tid,
+						pid: toPid,
+						topicName: topicName,
+						text: username ? username + ' ' : ''
+					});
+				}
+			}
+		});
 	}
 
 	function onQuoteClicked(button, tid, topicName) {
-		var username = getUserName(button),
-			pid = getData(button, 'data-pid');
+		showStaleWarning(function(proceed) {
+			if (!proceed) {
+				var username = getUserName(button),
+					pid = getData(button, 'data-pid');
 
-		socket.emit('posts.getRawPost', pid, function(err, post) {
-			if(err) {
-				return app.alertError(err.message);
+				socket.emit('posts.getRawPost', pid, function(err, post) {
+					if(err) {
+						return app.alertError(err.message);
+					}
+
+					$(window).trigger('action:composer.addQuote', {
+						tid: tid,
+						slug: ajaxify.data.slug,
+						index: getData(button, 'data-index'),
+						pid: pid,
+						username: username,
+						topicName: topicName,
+						text: post
+					});
+				});
 			}
-
-			$(window).trigger('action:composer.addQuote', {
-				tid: tid,
-				slug: ajaxify.data.slug,
-				index: getData(button, 'data-index'),
-				pid: pid,
-				username: username,
-				topicName: topicName,
-				text: post
-			});
 		});
 	}
 
@@ -246,7 +258,9 @@ define('forum/topic/postTools', ['share', 'navigator', 'components', 'translator
 	function getUserName(button) {
 		var username = '',
 			post = button.parents('[data-pid]');
-
+		if (button.attr('component') === 'topic/reply') {
+			return username;
+		}
 		if (post.length) {
 			username = post.attr('data-username').replace(/\s/g, '-');
 		}
@@ -289,53 +303,63 @@ define('forum/topic/postTools', ['share', 'navigator', 'components', 'translator
 	}
 
 	function openMovePostModal(button) {
-		var moveModal = $('#move-post-modal'),
-			moveBtn = moveModal.find('#move_post_commit'),
-			topicId = moveModal.find('#topicId');
+		parseMoveModal(function(html) {
+			var moveModal = $(html);
 
-		showMoveModal();
+			var	moveBtn = moveModal.find('#move_post_commit'),
+				topicId = moveModal.find('#topicId');
 
-		moveModal.find('.close,#move_post_cancel').on('click', function() {
-			moveModal.addClass('hide');
-		});
+			moveModal.on('hidden.bs.modal', function() {
+				moveModal.remove();
+			});
 
-		topicId.on('change', function() {
-			if(topicId.val().length) {
-				moveBtn.removeAttr('disabled');
-			} else {
-				moveBtn.attr('disabled', true);
-			}
-		});
+			showMoveModal(moveModal);
 
-		moveBtn.on('click', function() {
-			movePost(button.parents('[data-pid]'), getData(button, 'data-pid'), topicId.val());
+			moveModal.find('.close, #move_post_cancel').on('click', function() {
+				moveModal.addClass('hide');
+			});
+
+			topicId.on('keyup change', function() {
+				moveBtn.attr('disabled', !topicId.val())
+			});
+
+			moveBtn.on('click', function() {
+				movePost(button.parents('[data-pid]'), getData(button, 'data-pid'), topicId.val(), function() {
+					moveModal.modal('hide');
+					topicId.val('');
+				});
+			});
+
 		});
 	}
 
-	function showMoveModal() {
-		$('#move-post-modal').removeClass('hide')
+	function parseMoveModal(callback) {
+		templates.parse('partials/move_post_modal', {}, function(html) {
+			translator.translate(html, callback);
+		});
+	}
+
+	function showMoveModal(modal) {
+		modal.modal('show')
 			.css("position", "fixed")
-			.css("left", Math.max(0, (($(window).width() - $($('#move-post-modal')).outerWidth()) / 2) + $(window).scrollLeft()) + "px")
+			.css("left", Math.max(0, (($(window).width() - modal.outerWidth()) / 2) + $(window).scrollLeft()) + "px")
 			.css("top", "0px")
 			.css("z-index", "2000");
 	}
 
-	function movePost(post, pid, tid) {
-		socket.emit('topics.movePost', {pid: pid, tid: tid}, function(err) {
-			$('#move-post-modal').addClass('hide');
-
+	function movePost(post, pid, tid, callback) {
+		socket.emit('posts.movePost', {pid: pid, tid: tid}, function(err) {
 			if (err) {
-				$('#topicId').val('');
-				return app.alertError(err.message);
+				app.alertError(err.message);
+				return callback();
 			}
 
 			post.fadeOut(500, function() {
 				post.remove();
 			});
 
-			$('#topicId').val('');
-
 			app.alertSuccess('[[topic:post_moved]]');
+			callback();
 		});
 	}
 
@@ -362,6 +386,25 @@ define('forum/topic/postTools', ['share', 'navigator', 'components', 'translator
 		app.openChat(post.attr('data-username'), post.attr('data-uid'));
 		button.parents('.btn-group').find('.dropdown-toggle').click();
 		return false;
+	}
+
+	function showStaleWarning(callback) {
+		if (ajaxify.data.lastposttime < (Date.now() - (1000*60*60*24*config.topicStaleDays))) {
+			translator.translate('[[topic:stale_topic_warning]]', function(translated) {
+				bootbox.confirm(translated, function(create) {
+					if (create) {
+						$(window).trigger('action:composer.topic.new', {
+							cid: ajaxify.data.cid
+						});
+
+					}
+
+					callback(create);
+				});
+			});
+		} else {
+			callback(false);
+		}
 	}
 
 	return PostTools;

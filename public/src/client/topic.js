@@ -1,10 +1,9 @@
 'use strict';
 
 
-/* globals define, app, templates, socket, bootbox, config, ajaxify, RELATIVE_PATH, utils */
+/* globals define, app, socket, config, ajaxify, RELATIVE_PATH, utils */
 
 define('forum/topic', [
-	'forum/pagination',
 	'forum/infinitescroll',
 	'forum/topic/threadTools',
 	'forum/topic/postTools',
@@ -13,9 +12,8 @@ define('forum/topic', [
 	'forum/topic/posts',
 	'navigator',
 	'sort',
-	'components',
-	'translator'
-], function(pagination, infinitescroll, threadTools, postTools, events, browsing, posts, navigator, sort, components, translator) {
+	'components'
+], function(infinitescroll, threadTools, postTools, events, browsing, posts, navigator, sort, components) {
 	var	Topic = {},
 		currentUrl = '';
 
@@ -26,6 +24,7 @@ define('forum/topic', [
 			app.removeAlert('bookmark');
 
 			events.removeListeners();
+			$(window).off('keydown', onKeyDown);
 		}
 
 		if (!data.url.startsWith('topic/')) {
@@ -56,13 +55,16 @@ define('forum/topic', [
 
 		addBlockQuoteHandler();
 
+		addParentHandler();
+
 		handleBookmark(tid);
 
-		navigator.init('[component="post"]', ajaxify.data.postcount, Topic.toTop, Topic.toBottom, Topic.navigatorCallback, Topic.calculateIndex);
+		handleKeys();
+
+		navigator.init('[component="post/anchor"]', ajaxify.data.postcount, Topic.toTop, Topic.toBottom, Topic.navigatorCallback, Topic.calculateIndex);
 
 		$(window).on('scroll', updateTopicTitle);
 
-		$(window).trigger('action:topic.loaded');
 
 		if (app.user.uid) {
 			socket.emit('topics.enter', tid, function(err, data) {
@@ -74,7 +76,27 @@ define('forum/topic', [
 		}
 
 		handleTopicSearch();
+
+		$(window).trigger('action:topic.loaded');
 	};
+
+	function handleKeys() {
+		if (!config.usePagination) {
+			$(window).off('keydown', onKeyDown).on('keydown', onKeyDown);
+		}
+	}
+
+	function onKeyDown(ev) {
+		if (ev.target.nodeName === 'BODY') {
+			if (ev.which === 36) { // home key
+				Topic.toTop();
+				return false;
+			} else if (ev.which === 35) { // end key
+				Topic.toBottom();
+				return false;
+			}
+		}
+	}
 
 	function handleTopicSearch() {
 		require(['search', 'mousetrap'], function(search, Mousetrap) {
@@ -103,7 +125,7 @@ define('forum/topic', [
 	}
 
 	Topic.toTop = function() {
-		navigator.scrollTop();
+		navigator.scrollTop(0);
 	};
 
 	Topic.toBottom = function() {
@@ -124,7 +146,7 @@ define('forum/topic', [
 			if (components.get('post/anchor', postIndex).length) {
 				return navigator.scrollToPostIndex(postIndex, true);
 			}
-		} else if (bookmark && (!config.usePagination || (config.usePagination && pagination.currentPage === 1)) && ajaxify.data.postcount > 10) {
+		} else if (bookmark && (!config.usePagination || (config.usePagination && ajaxify.data.pagination.currentPage === 1)) && ajaxify.data.postcount > 10) {
 			app.alert({
 				alert_id: 'bookmark',
 				message: '[[topic:bookmark_instructions]]',
@@ -169,20 +191,37 @@ define('forum/topic', [
 		});
 	}
 
+	function addParentHandler() {
+		components.get('topic').on('click', '[component="post/parent"]', function() {
+			var toPid = $(this).attr('data-topid');
+
+			var toPost = $('[component="post"][data-pid="' + toPid + '"]');
+			if (toPost.length) {
+				return navigator.scrollToPost(toPost.attr('data-index'), true);
+			}
+
+			socket.emit('posts.getPidIndex', {pid: toPid, tid: ajaxify.data.tid, topicPostSort: config.topicPostSort}, function(err, index) {
+				if (err) {
+					return app.alertError(err.message);
+				}
+
+				if (utils.isNumber(index)) {
+					navigator.scrollToPost(index, true);
+				}
+			});
+		});
+	}
 
 	function enableInfiniteLoadingOrPagination() {
-		if(!config.usePagination) {
-			infinitescroll.init(posts.loadMorePosts, components.get('post', 'index', 0).height());
+		if (!config.usePagination) {
+			infinitescroll.init($('[component="topic"]'), posts.loadMorePosts);
 		} else {
 			navigator.hide();
-
-			pagination.init(parseInt(ajaxify.data.currentPage, 10), parseInt(ajaxify.data.pageCount, 10));
 		}
 	}
 
-
 	function updateTopicTitle() {
-		if($(window).scrollTop() > 50) {
+		if ($(window).scrollTop() > 50) {
 			components.get('navbar/title').find('span').text(ajaxify.data.title).show();
 		} else {
 			components.get('navbar/title').find('span').text('').hide();
@@ -197,44 +236,10 @@ define('forum/topic', [
 		return index;
 	};
 
-	Topic.navigatorCallback = function(topPostIndex, bottomPostIndex, elementCount) {
+	Topic.navigatorCallback = function(index, elementCount) {
 		var path = ajaxify.removeRelativePath(window.location.pathname.slice(1));
 		if (!path.startsWith('topic')) {
 			return 1;
-		}
-		var postIndex = topPostIndex;
-		var index = bottomPostIndex;
-		if (config.topicPostSort !== 'oldest_to_newest') {
-			if (bottomPostIndex === 0) {
-				index = 1;
-			} else  {
-				index = Math.max(elementCount - bottomPostIndex + 2, 1);
-			}
-		}
-
-		var bookmarkKey = 'topic:' + ajaxify.data.tid + ':bookmark';
-		var currentBookmark = ajaxify.data.bookmark || localStorage.getItem(bookmarkKey);
-
-		if (!currentBookmark || parseInt(postIndex, 10) > parseInt(currentBookmark, 10)) {
-			if (app.user.uid) {
-				var payload = {
-					'tid': ajaxify.data.tid,
-					'index': postIndex
-				};
-				socket.emit('topics.bookmark', payload, function(err) {
-					if (err) {
-						console.warn('Error saving bookmark:', err);
-					}
-					ajaxify.data.bookmark = postIndex;
-				});
-			} else {
-				localStorage.setItem(bookmarkKey, postIndex);
-			}
-		}
-
-		// removes the bookmark alert when we get to / past the bookmark
-		if (!currentBookmark || parseInt(postIndex, 10) >= parseInt(currentBookmark, 10)) {
-			app.removeAlert('bookmark');
 		}
 
 		if (!navigator.scrollActive) {
@@ -242,22 +247,58 @@ define('forum/topic', [
 			var topicId = parts[1],
 				slug = parts[2];
 			var newUrl = 'topic/' + topicId + '/' + (slug ? slug : '');
-			if (postIndex > 1) {
-				newUrl += '/' + postIndex;
+			if (index > 1) {
+				newUrl += '/' + index;
 			}
 
 			if (newUrl !== currentUrl) {
-				if (history.replaceState) {
-					var search = (window.location.search ? window.location.search : '');
-					history.replaceState({
-						url: newUrl + search
-					}, null, window.location.protocol + '//' + window.location.host + RELATIVE_PATH + '/' + newUrl + search);
+				if (Topic.replaceURLTimeout) {
+					clearTimeout(Topic.replaceURLTimeout);
 				}
-				currentUrl = newUrl;
+
+				Topic.replaceURLTimeout = setTimeout(function() {
+
+					updateUserBookmark(index);
+
+					Topic.replaceURLTimeout = 0;
+					if (history.replaceState) {
+						var search = (window.location.search ? window.location.search : '');
+						history.replaceState({
+							url: newUrl + search
+						}, null, window.location.protocol + '//' + window.location.host + RELATIVE_PATH + '/' + newUrl + search);
+					}
+					currentUrl = newUrl;
+				}, 500);
 			}
 		}
-		return index;
 	};
+
+	function updateUserBookmark(index) {
+		var bookmarkKey = 'topic:' + ajaxify.data.tid + ':bookmark';
+		var currentBookmark = ajaxify.data.bookmark || localStorage.getItem(bookmarkKey);
+
+		if (!currentBookmark || parseInt(index, 10) > parseInt(currentBookmark, 10)) {
+			if (app.user.uid) {
+				socket.emit('topics.bookmark', {
+					'tid': ajaxify.data.tid,
+					'index': index
+				}, function(err) {
+					if (err) {
+						return app.alertError(err.message);
+					}
+					ajaxify.data.bookmark = index;
+				});
+			} else {
+				localStorage.setItem(bookmarkKey, index);
+			}
+		}
+
+		// removes the bookmark alert when we get to / past the bookmark
+		if (!currentBookmark || parseInt(index, 10) >= parseInt(currentBookmark, 10)) {
+			app.removeAlert('bookmark');
+		}
+
+	}
 
 
 	return Topic;

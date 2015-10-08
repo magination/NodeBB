@@ -51,6 +51,7 @@
     "confirm_password": "تکرار گذرواژه",
     "password": "گذرواژه",
     "username_taken_workaround": "نام کاربری درخواستی شما در حال حاضر گرفته شده است، بنابراین ما آن را کمی تغییر داده‌ایم. شما هم‌اکنون با نام <strong>%1</strong  شناخته می‌شوید.",
+    "password_same_as_username": "Your password is the same as your username, please select another password.",
     "upload_picture": "بارگذاری تصویر",
     "upload_a_picture": "یک تصویر بارگذاری کنید",
     "remove_uploaded_picture": "Remove Uploaded Picture",
@@ -87,5 +88,8 @@
     "follow_topics_you_create": "جستارهایی که ایجاد کرده ای را دنبال کن",
     "grouptitle": "عنوان گروهی که میخواهید نشان داده شود را انتخاب کنید.",
     "no-group-title": "عنوان گروه ای نیست",
-    "select-skin": "Select a Skin"
+    "select-skin": "Select a Skin",
+    "sso.title": "Single Sign-on Services",
+    "sso.associated": "Associated with",
+    "sso.not-associated": "Click here to associate with"
 }

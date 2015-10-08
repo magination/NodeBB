@@ -45,7 +45,6 @@ module.exports = function(User) {
 					var pagination = User.paginate(page, uids);
 					uids = pagination.data;
 					searchResult.pagination = pagination.pagination;
-					searchResult.pageCount = pagination.pageCount;
 				}
 
 				User.getUsers(uids, uid, next);
@@ -103,7 +102,7 @@ module.exports = function(User) {
 
 		async.parallel({
 			userData: function(next) {
-				User.getMultipleUserFields(uids, fields, next);
+				User.getUsersFields(uids, fields, next);
 			},
 			isOnline: function(next) {
 				if (data.onlineOnly) {
