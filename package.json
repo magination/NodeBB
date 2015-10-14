@@ -43,6 +43,7 @@
     "nodebb-plugin-composer-default": "1.0.16",
     "nodebb-plugin-dbsearch": "0.2.17",
     "nodebb-plugin-emoji-extended": "0.4.14",
+    "nodebb-plugin-magination-points": "git://github.com/magination/NodeBB.git#master",
     "nodebb-plugin-markdown": "4.0.6",
     "nodebb-plugin-mentions": "1.0.6",
     "nodebb-plugin-soundpack-default": "0.1.4",
