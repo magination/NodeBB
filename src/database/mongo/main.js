@@ -123,6 +123,13 @@ module.exports = function(db, module) {
 		module.getObjectField(key, 'value', callback);
 	};
 
+	module.getArray = function(key, callback) {
+		if (!key) {
+			return callback();
+		}
+		module.getObjectField(key, 'array', callback);
+	}
+
 	module.set = function(key, value, callback) {
 		callback = callback || helpers.noop;
 		if (!key) {
