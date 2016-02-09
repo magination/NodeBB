@@ -10,6 +10,8 @@ define('forum/topic/postTools', ['share', 'navigator', 'components', 'translator
 	PostTools.init = function(tid) {
 		topicName = ajaxify.data.title;
 
+		renderMenu();
+
 		addPostHandlers(tid);
 
 		share.addShareHandlers(topicName);
@@ -18,6 +20,30 @@ define('forum/topic/postTools', ['share', 'navigator', 'components', 'translator
 
 		PostTools.updatePostCount(ajaxify.data.postcount);
 	};
+
+	function renderMenu() {
+		$('[component="topic"]').on('show.bs.dropdown', '.moderator-tools', function() {
+			var $this = $(this);
+			var dropdownMenu = $this.find('.dropdown-menu');
+			if (dropdownMenu.html()) {
+				return;
+			}
+			var postEl = $this.parents('[data-pid]');
+			var pid = postEl.attr('data-pid');
+			var index = parseInt(postEl.attr('data-index'), 10);
+			socket.emit('posts.loadPostTools', {pid: pid, cid: ajaxify.data.cid}, function(err, data) {
+				if (err) {
+					return app.alertError(err);
+				}
+				data.posts.display_move_tools = data.posts.display_move_tools && index !== 0;
+				templates.parse('partials/topic/post-menu-list', data, function(html) {
+					translator.translate(html, function(html) {
+						dropdownMenu.html(html);
+					});
+				});
+			});
+		});
+	}
 
 	PostTools.toggle = function(pid, isDeleted) {
 		var postEl = components.get('post', 'pid', pid);
@@ -39,7 +65,7 @@ define('forum/topic/postTools', ['share', 'navigator', 'components', 'translator
 
 	function addVoteHandler() {
 		components.get('topic').on('mouseenter', '[data-pid] [component="post/vote-count"]', function() {
-			loadDataAndCreateTooltip($(this));
+			loadDataAndCreateTooltip($(this).parent());
 		});
 	}
 
@@ -87,7 +113,7 @@ define('forum/topic/postTools', ['share', 'navigator', 'components', 'translator
 			onReplyClicked($(this), tid, topicName);
 		});
 
-		components.get('topic/reply').on('click', function() {
+		$('.topic').on('click', '[component="topic/reply"]', function() {
 			onReplyClicked($(this), tid, topicName);
 		});
 
@@ -230,7 +256,11 @@ define('forum/topic/postTools', ['share', 'navigator', 'components', 'translator
 			room_id: app.currentRoom
 		}, function(err) {
 			if (err) {
-				app.alertError(err.message);
+				if (err.message === 'self-vote') {
+					showVotes(post.attr('data-pid'));
+				} else {
+					app.alertError(err.message);
+				}
 			}
 		});
 
@@ -240,6 +270,11 @@ define('forum/topic/postTools', ['share', 'navigator', 'components', 'translator
 	function showVotes(pid) {
 		socket.emit('posts.getVoters', {pid: pid, cid: ajaxify.data.cid}, function(err, data) {
 			if (err) {
+				if (err.message === '[[error:no-privileges]]') {
+					return;
+				}
+
+				// Only show error if it's an unexpected error.
 				return app.alertError(err.message);
 			}
 
@@ -382,17 +417,34 @@ define('forum/topic/postTools', ['share', 'navigator', 'components', 'translator
 
 	function showStaleWarning(callback) {
 		if (ajaxify.data.lastposttime < (Date.now() - (1000*60*60*24*config.topicStaleDays))) {
-			translator.translate('[[topic:stale_topic_warning]]', function(translated) {
-				bootbox.confirm(translated, function(create) {
-					if (create) {
-						$(window).trigger('action:composer.topic.new', {
-							cid: ajaxify.data.cid
-						});
+			translator.translate('[[topic:stale.warning]]', function(translated) {
+				var warning = bootbox.dialog({
+						title: '[[topic:stale.title]]',
+						message: translated,
+						buttons: {
+							reply: {
+								label: '[[topic:stale.reply_anyway]]',
+								className: 'btn-link',
+								callback: function() {
+									callback(false);
+								}
+							},
+							create: {
+								label: '[[topic:stale.create]]',
+								className: 'btn-primary',
+								callback: function() {
+									translator.translate('[[topic:stale.link_back, ' + ajaxify.data.title + ', ' + config.relative_path + '/topic/' + ajaxify.data.slug + ']]', function(body) {
+										$(window).trigger('action:composer.topic.new', {
+											cid: ajaxify.data.cid,
+											body: body
+										});
+									});
+								}
+							}
+						}
+					});
 
-					}
-
-					callback(create);
-				});
+				warning.modal();
 			});
 		} else {
 			callback(false);

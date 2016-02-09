@@ -23,14 +23,39 @@ module.exports = function(SocketUser) {
 		], callback);
 	};
 
+	SocketUser.updateCover = function(socket, data, callback) {
+		if (!socket.uid) {
+			return callback(new Error('[[error:no-privileges]]'));
+		}
+
+		user.isAdministrator(socket.uid, function(err, isAdmin) {
+			if (!isAdmin && data.uid !== socket.uid) {
+				return callback(new Error('[[error:no-privileges]]'));
+			}
+
+			user.updateCoverPicture(data, callback);
+		});
+	};
+
+	SocketUser.removeCover = function(socket, data, callback) {
+		if (!socket.uid) {
+			return callback(new Error('[[error:no-privileges]]'));
+		}
+
+		user.isAdminOrSelf(socket.uid, data.uid, function(err) {
+			if (err) {
+				return callback(err);
+			}
+
+			user.removeCoverPicture(data, callback);
+		});
+	};
+
 	function isAdminOrSelfAndPasswordMatch(uid, data, callback) {
 		async.parallel({
-			isAdmin: function(next) {
-				user.isAdministrator(uid, next);
-			},
-			passwordMatch: function(next) {
-				user.isPasswordCorrect(data.uid, data.password, next);
-			}
+			isAdmin: async.apply(user.isAdministrator, uid),
+			hasPassword: async.apply(user.hasPassword, data.uid),
+			passwordMatch: async.apply(user.isPasswordCorrect, data.uid, data.password)
 		}, function(err, results) {
 			if (err) {
 				return callback(err);
@@ -41,7 +66,7 @@ module.exports = function(SocketUser) {
 				return callback(new Error('[[error:no-privileges]]'));
 			}
 
-			if (self && !results.passwordMatch) {
+			if (self && results.hasPassword && !results.passwordMatch) {
 				return callback(new Error('[[error:invalid-password]]'));
 			}
 
@@ -92,13 +117,17 @@ module.exports = function(SocketUser) {
 					return next(new Error('[[error:invalid-data]]'));
 				}
 
-				if (parseInt(meta.config['username:disableEdit'], 10) === 1) {
+				user.isAdministrator(socket.uid, next);
+			},
+			function(isAdmin, next) {
+				if (!isAdmin && socket.uid !== parseInt(data.uid, 10)) {
+					return next(new Error('[[error:no-privileges]]'));
+				}
+
+				if (!isAdmin && parseInt(meta.config['username:disableEdit'], 10) === 1) {
 					data.username = oldUserData.username;
 				}
-				user.isAdminOrSelf(socket.uid, data.uid, next);
-			},
-			function (next) {
-				console.log('updating profile', data)
+
 				user.updateProfile(data.uid, data, next);
 			},
 			function (userData, next) {

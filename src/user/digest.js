@@ -20,10 +20,6 @@ var	async = require('async'),
 			return winston.verbose('[user/jobs] Did not send digests (' + interval + ') because subscription system is disabled.');
 		}
 
-		if (!plugins.hasListeners('filter:email.send')) {
-			return winston.error('[user/jobs] Did not send digests (' + interval + ') because no active email plugin was found.');
-		}
-
 		if (!interval) {
 			// interval is one of: day, week, month, or year
 			interval = 'day';
@@ -98,7 +94,7 @@ var	async = require('async'),
 					}
 
 					for(var i=0; i<notifications.length; ++i) {
-						if (notifications[i].image.indexOf('http') !== 0) {
+						if (notifications[i].image && notifications[i].image.indexOf('http') !== 0) {
 							notifications[i].image = nconf.get('url') + notifications[i].image;
 						}
 					}

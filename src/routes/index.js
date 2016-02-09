@@ -6,6 +6,7 @@ var nconf = require('nconf'),
 	controllers = require('../controllers'),
 	plugins = require('../plugins'),
 	express = require('express'),
+	validator = require('validator'),
 
 	accountRoutes = require('./accounts'),
 
@@ -62,7 +63,6 @@ function userRoutes(app, middleware, controllers) {
 	setupPageRoute(app, '/users/sort-posts', middleware, middlewares, controllers.users.getUsersSortedByPosts);
 	setupPageRoute(app, '/users/sort-reputation', middleware, middlewares, controllers.users.getUsersSortedByReputation);
 	setupPageRoute(app, '/users/search', middleware, middlewares, controllers.users.getUsersForSearch);
-	setupPageRoute(app, '/users/map', middleware, middlewares, controllers.users.getMap);
  }
 
 
@@ -82,6 +82,9 @@ module.exports = function(app, middleware) {
 		ensureLoggedIn = require('connect-ensure-login');
 
 	pluginRouter.render = function() {
+		app.render.apply(app, arguments);
+	};
+	controllers.render = function() {
 		app.render.apply(app, arguments);
 	};
 
@@ -152,6 +155,8 @@ function handle404(app, middleware) {
 			res.status(200).json({});
 		} else if (req.path.startsWith(relativePath + '/uploads')) {
 			res.status(404).send('');
+		} else if (req.path === '/favicon.ico') {
+			res.status(404).send('');
 		} else if (req.accepts('html')) {
 			if (process.env.NODE_ENV === 'development') {
 				winston.warn('Route requested but not found: ' + req.url);
@@ -173,7 +178,7 @@ function handle404(app, middleware) {
 }
 
 function handleErrors(app, middleware) {
-	app.use(function(err, req, res) {
+	app.use(function(err, req, res, next) {
 		if (err.code === 'EBADCSRFTOKEN') {
 			winston.error(req.path + '\n', err.message);
 			return res.sendStatus(403);
@@ -188,10 +193,10 @@ function handleErrors(app, middleware) {
 		res.status(err.status || 500);
 
 		if (res.locals.isAPI) {
-			return res.json({path: req.path, error: err.message});
+			res.json({path: req.path, error: err.message});
 		} else {
 			middleware.buildHeader(req, res, function() {
-				res.render('500', {path: req.path, error: err.message});
+				res.render('500', {path: req.path, error: validator.escape(err.message)});
 			});
 		}
 	});

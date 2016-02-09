@@ -18,6 +18,12 @@
 				</label>
 			</div>
 
+			<div class="form-group form-inline">
+				<label for="emailConfirmInterval">User may not resend a confirmation email until</label>
+				<input class="form-control" data-field="emailConfirmInterval" type="number" id="emailConfirmInterval" placeholder="Default: 10" value="10" />
+				<label for="emailConfirmInterval">minutes have elapsed</label>
+			</div>
+
 			<div class="form-group">
 				<label>Allow login with</label>
 				<select class="form-control" data-field="allowLoginWith">
@@ -33,8 +39,18 @@
 					<option value="normal">Normal</option>
 					<option value="admin-approval">Admin Approval</option>
 					<option value="invite-only">Invite Only</option>
+					<option value="admin-invite-only">Admin Invite Only</option>
 					<option value="disabled">No registration</option>
 				</select>
+			</div>
+
+			<div class="form-group">
+				<label>Maximum Invitations per User</label>
+				<input type="number" class="form-control" data-field="maximumInvites" placeholder="0">
+				<p class="help-block">
+					0 for no restriction. Admins get infinite invitations<br>
+					Only applicable for "Invite Only"
+				</p>
 			</div>
 		</form>
 	</div>
@@ -85,23 +101,11 @@
 			</div>
 
 			<div class="form-group">
-				<label>Default Gravatar Image</label>
-				<select class="form-control" data-field="defaultGravatarImage">
-					<option value="">default</option>
-					<option value="identicon">identicon</option>
-					<option value="mm">mystery-man</option>
-					<option value="monsterid">monsterid</option>
-					<option value="wavatar">wavatar</option>
-					<option value="retro">retro</option>
-				</select>
-			</div>
-
-			<div class="form-group">
-				<label>Custom Gravatar Default Image</label>
+				<label>Custom Default Avatar</label>
 				<div class="input-group">
-					<input id="customGravatarDefaultImage" type="text" class="form-control" placeholder="A custom image to use instead of gravatar defaults" data-field="customGravatarDefaultImage" />
+					<input id="defaultAvatar" type="text" class="form-control" placeholder="A custom image to use instead of user icons" data-field="defaultAvatar" />
 					<span class="input-group-btn">
-						<input data-action="upload" data-target="customGravatarDefaultImage" data-route="{config.relative_path}/api/admin/uploadgravatardefault" type="button" class="btn btn-default" value="Upload"></input>
+						<input data-action="upload" data-target="defaultAvatar" data-route="{config.relative_path}/api/admin/uploadDefaultAvatar" type="button" class="btn btn-default" value="Upload"></input>
 					</span>
 				</div>
 			</div>
@@ -112,9 +116,27 @@
 			</div>
 
 			<div class="form-group">
-				<label>Maximum User Image File Size</label>
+				<label>Maximum Profile Image File Size</label>
 				<input type="text" class="form-control" placeholder="Maximum size of uploaded user images in kilobytes" data-field="maximumProfileImageSize" />
 			</div>
+
+			<div class="form-group">
+				<label>Maximum Cover Image File Size</label>
+				<input type="text" class="form-control" placeholder="Maximum size of uploaded cover images in kilobytes" data-field="maximumCoverImageSize" />
+			</div>
+		</form>
+	</div>
+</div>
+
+<div class="row">
+	<div class="col-sm-2 col-xs-12 settings-header">Profile Cover Image</div>
+	<div class="col-sm-10 col-xs-12">
+		<form>
+			<label for="profile:defaultCovers"><strong>Default Cover Images</strong></label>
+			<p class="help-block">
+				Add comma-separated default cover images for accounts that don't have an uploaded cover image
+			</p>
+			<input type="text" class="form-control input-lg" id="profile:defaultCovers" data-field="profile:defaultCovers" value="{config.relative_path}/images/cover-default.png" placeholder="https://example.com/group1.png, https://example.com/group2.png" />
 		</form>
 	</div>
 </div>

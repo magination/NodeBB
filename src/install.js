@@ -10,7 +10,7 @@ var async = require('async'),
 
 	DATABASES = {
 		"redis": {
-			"dependencies": ["redis@~0.10.1", "connect-redis@~2.0.0"]
+			"dependencies": ["redis@~2.4.2", "connect-redis@~2.0.0"]
 		},
 		"mongo": {
 			"dependencies": ["mongodb@~2.0.0", "connect-mongo@~0.8.2"]
@@ -460,10 +460,15 @@ function createWelcomePost(next) {
 			db.getObjectField('global', 'topicCount', next);
 		}
 	], function(err, results) {
+		if (err) {
+			return next(err);
+		}
+
 		var content = results[0],
 			numTopics = results[1];
 
 		if (!parseInt(numTopics, 10)) {
+			process.stdout.write('Creating welcome post!\n');
 			Topics.post({
 				uid: 1,
 				cid: 2,

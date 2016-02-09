@@ -15,6 +15,7 @@
     "chat.seven_days": "7 Gün",
     "chat.thirty_days": "30 Gün",
     "chat.three_months": "3 Ay",
+    "chat.delete_message_confirm": "Bu mesajı silmek istediğinden emin misin?",
     "composer.compose": "Yaz",
     "composer.show_preview": "Önizleme Göster",
     "composer.hide_preview": "Önizleme Sakla",
@@ -23,7 +24,11 @@
     "composer.discard": "Bu iletiyi iptal etmek istediğinizden eminmisiniz?",
     "composer.submit_and_lock": "Gönder ve Kitle",
     "composer.toggle_dropdown": "Menü aç",
+    "composer.uploading": "Yükleniyor %1",
     "bootbox.ok": "Tamam",
     "bootbox.cancel": "İptal",
-    "bootbox.confirm": "Onayla"
+    "bootbox.confirm": "Onayla",
+    "cover.dragging_title": "Kapak Görseli Konumlandırma",
+    "cover.dragging_message": "Kapak görselini istediğin pozisyona getir ve kaydet",
+    "cover.saved": "Kapak görseli ve pozisyonu kaydedildi"
 }

@@ -41,7 +41,6 @@
 	"no-user": "User does not exist",
 	"no-teaser": "Teaser does not exist",
 	"no-privileges": "You do not have enough privileges for this action.",
-	"no-emailers-configured": "No email plugins were loaded, so a test email could not be sent",
 
 	"category-disabled": "Category disabled",
 
@@ -63,7 +62,6 @@
 
 	"file-too-big": "Maximum allowed file size is %1 kB - please upload a smaller file",
 
-	"cant-vote-self-post": "You cannot vote for your own post",
 	"already-favourited": "You have already favourited this post",
 	"already-unfavourited": "You have already unfavourited this post",
 
@@ -103,6 +101,7 @@
 	"too-many-messages": "You have sent too many messages, please wait awhile.",
 	"invalid-chat-message": "Invalid chat message",
 	"chat-message-too-long": "Chat message is too long",
+	"cant-edit-chat-message": "You are not allowed to edit this message",
 
 	"reputation-system-disabled": "Reputation system is disabled.",
 	"downvoting-disabled": "Downvoting is disabled",
@@ -115,5 +114,7 @@
 	"registration-error": "Registration Error",
 	"parse-error": "Something went wrong while parsing server response",
 	"wrong-login-type-email": "Please use your email to login",
-	"wrong-login-type-username": "Please use your username to login"
+	"wrong-login-type-username": "Please use your username to login",
+
+	"invite-maximum-met": "You have invited the maximum amount of people (%1 out of %2)."
 }

@@ -15,6 +15,7 @@
     "chat.seven_days": "7 Hari",
     "chat.thirty_days": "30 Hari",
     "chat.three_months": "3 Bulan",
+    "chat.delete_message_confirm": "Are you sure you wish to delete this message?",
     "composer.compose": "Tulis",
     "composer.show_preview": "Pra-lihat",
     "composer.hide_preview": "Sorok pra-lihat",
@@ -23,7 +24,11 @@
     "composer.discard": "Anda yakin untuk membuang kiriman ini?",
     "composer.submit_and_lock": "Hantar dan Kunci",
     "composer.toggle_dropdown": "Togol Kebawah",
+    "composer.uploading": "Memuat naik %1",
     "bootbox.ok": "Ok",
     "bootbox.cancel": "Batal",
-    "bootbox.confirm": "Pasti"
+    "bootbox.confirm": "Pasti",
+    "cover.dragging_title": "Kedudukan Gambar Muka",
+    "cover.dragging_message": "Seret gambar muka ke kedudukan yang diingini dan klik \"Simpan\"",
+    "cover.saved": "Gambar muka dan kedudukan disimpan"
 }

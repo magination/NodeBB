@@ -26,13 +26,13 @@ var async = require('async'),
 
 			var now = Date.now();
 
-			if(type === 'upvote' && !unvote) {
+			if (type === 'upvote' && !unvote) {
 				db.sortedSetAdd('uid:' + uid + ':upvote', now, pid);
 			} else {
 				db.sortedSetRemove('uid:' + uid + ':upvote', pid);
 			}
 
-			if(type === 'upvote' || unvote) {
+			if (type === 'upvote' || unvote) {
 				db.sortedSetRemove('uid:' + uid + ':downvote', pid);
 			} else {
 				db.sortedSetAdd('uid:' + uid + ':downvote', now, pid);
@@ -133,19 +133,9 @@ var async = require('async'),
 
 		putVoteInProgress(pid, uid);
 
-		user.getUserField(uid, 'reputation', function(err, reputation) {
-			if (err) {
-				return callback(err);
-			}
-
-			if (reputation < parseInt(meta.config['privileges:downvote'], 10)) {
-				return callback(new Error('[[error:not-enough-reputation-to-downvote]]'));
-			}
-
-			toggleVote('downvote', pid, uid, function(err, data) {
-				clearVoteProgress(pid, uid);
-				callback(err, data);
-			});
+		toggleVote('downvote', pid, uid, function(err, data) {
+			clearVoteProgress(pid, uid);
+			callback(err, data);
 		});
 	};
 
@@ -197,6 +187,9 @@ var async = require('async'),
 			},
 			voteStatus: function(next) {
 				Favourites.hasVoted(pid, uid, next);
+			},
+			reputation: function(next) {
+				user.getUserField(uid, 'reputation', next);
 			}
 		}, function(err, results) {
 			if (err) {
@@ -204,7 +197,11 @@ var async = require('async'),
 			}
 
 			if (parseInt(uid, 10) === parseInt(results.owner, 10)) {
-				return callback(new Error('[[error:cant-vote-self-post]]'));
+				return callback(new Error('self-vote'));
+			}
+
+			if (command === 'downvote' && parseInt(results.reputation) < parseInt(meta.config['privileges:downvote'], 10)) {
+				return callback(new Error('[[error:not-enough-reputation-to-downvote]]'));
 			}
 
 			var voteStatus = results.voteStatus,
@@ -213,7 +210,7 @@ var async = require('async'),
 
 			if (voteStatus.upvoted && command === 'downvote' || voteStatus.downvoted && command === 'upvote') {	// e.g. User *has* upvoted, and clicks downvote
 				hook = command;
-			} else if (voteStatus.upvoted || voteStatus.downvoted) {	// e.g. User *has* upvotes, clicks upvote (so we "unvote")
+			} else if (voteStatus.upvoted || voteStatus.downvoted) {	// e.g. User *has* upvoted, clicks upvote (so we "unvote")
 				hook = 'unvote';
 			} else {	// e.g. User *has not* voted, clicks upvote
 				hook = command;

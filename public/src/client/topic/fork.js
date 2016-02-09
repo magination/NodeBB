@@ -10,7 +10,7 @@ define('forum/topic/fork', ['components'], function(components) {
 		pids = [];
 
 	Fork.init = function() {
-		components.get('topic/fork').on('click', onForkThreadClicked);
+		$('.topic').on('click', '[component="topic/fork"]', onForkThreadClicked);
 	};
 
 	function disableClicks() {
@@ -118,7 +118,7 @@ define('forum/topic/fork', ['components'], function(components) {
 
 			if (pids.length) {
 				pids.sort(function(a,b) { return a - b; });
-				forkModal.find('#fork-pids').html(pids.toString());
+				forkModal.find('#fork-pids').text(pids.join(', '));
 			} else {
 				showNoPostsSelected();
 			}

@@ -15,6 +15,7 @@
     "chat.seven_days": "7 أيام",
     "chat.thirty_days": "30 يومًا",
     "chat.three_months": "3 أشهر",
+    "chat.delete_message_confirm": "Are you sure you wish to delete this message?",
     "composer.compose": "اكتب",
     "composer.show_preview": "عرض المعاينة",
     "composer.hide_preview": "إخفاء المعاينة",
@@ -23,7 +24,11 @@
     "composer.discard": "هل أنت متأكد أنك تريد التخلي عن التغييرات؟",
     "composer.submit_and_lock": "Submit and Lock",
     "composer.toggle_dropdown": "Toggle Dropdown",
+    "composer.uploading": "Uploading %1",
     "bootbox.ok": "OK",
     "bootbox.cancel": "إلغاء",
-    "bootbox.confirm": "تأكيد"
+    "bootbox.confirm": "تأكيد",
+    "cover.dragging_title": "Cover Photo Positioning",
+    "cover.dragging_message": "Drag the cover photo to the desired position and click \"Save\"",
+    "cover.saved": "Cover photo image and position saved"
 }

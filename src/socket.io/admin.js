@@ -28,6 +28,7 @@ var	async = require('async'),
 		tags: require('./admin/tags'),
 		rewards: require('./admin/rewards'),
 		navigation: require('./admin/navigation'),
+		rooms: require('./admin/rooms'),
 		themes: {},
 		plugins: {},
 		widgets: {},
@@ -198,28 +199,36 @@ SocketAdmin.settings.clearSitemapCache = function(socket, data, callback) {
 };
 
 SocketAdmin.email.test = function(socket, data, callback) {
-	if (plugins.hasListeners('filter:email.send')) {
-		emailer.send(data.template, socket.uid, {
-			subject: '[NodeBB] Test Email',
-			site_title: meta.config.title || 'NodeBB'
-		}, callback);
-	} else {
-		callback(new Error('[[error:no-emailers-configured]]'));
-	}
+	emailer.send(data.template, socket.uid, {
+		subject: '[NodeBB] Test Email',
+		site_title: meta.config.title || 'NodeBB'
+	}, callback);
 };
 
 SocketAdmin.analytics.get = function(socket, data, callback) {
-	data.units = 'hours'; // temp
-	data.amount = 24;
+	// Default returns views from past 24 hours, by hour
+	if (data.units === 'days') {
+		data.amount = 30;
+	} else {
+		data.amount = 24;
+	}
 
 	if (data && data.graph && data.units && data.amount) {
 		if (data.graph === 'traffic') {
 			async.parallel({
 				uniqueVisitors: function(next) {
-					getHourlyStatsForSet('analytics:uniquevisitors', data.amount, next);
+					if (data.units === 'days') {
+						getDailyStatsForSet('analytics:uniquevisitors', data.until || Date.now(), data.amount, next);
+					} else {
+						getHourlyStatsForSet('analytics:uniquevisitors', data.until || Date.now(), data.amount, next);
+					}
 				},
 				pageviews: function(next) {
-					getHourlyStatsForSet('analytics:pageviews', data.amount, next);
+					if (data.units === 'days') {
+						getDailyStatsForSet('analytics:pageviews', data.until || Date.now(), data.amount, next);
+					} else {
+						getHourlyStatsForSet('analytics:pageviews', data.until || Date.now(), data.amount, next);
+					}
 				},
 				monthlyPageViews: function(next) {
 					analytics.getMonthlyPageViews(next);
@@ -243,14 +252,14 @@ SocketAdmin.logs.clear = function(socket, data, callback) {
 	meta.logs.clear(callback);
 };
 
-function getHourlyStatsForSet(set, hours, callback) {
-	var hour = new Date(),
-		terms = {},
+function getHourlyStatsForSet(set, hour, numHours, callback) {
+	var terms = {},
 		hoursArr = [];
 
+	hour = new Date(hour);
 	hour.setHours(hour.getHours(), 0, 0, 0);
 
-	for (var i = 0, ii = hours; i < ii; i++) {
+	for (var i = 0, ii = numHours; i < ii; i++) {
 		hoursArr.push(hour.getTime());
 		hour.setHours(hour.getHours() - 1, 0, 0, 0);
 	}
@@ -261,7 +270,7 @@ function getHourlyStatsForSet(set, hours, callback) {
 		}
 
 		hoursArr.forEach(function(term, index) {
-			terms[term] = counts[index] || 0;
+			terms[term] = parseInt(counts[index], 10) || 0;
 		});
 
 		var termsArr = [];
@@ -274,6 +283,30 @@ function getHourlyStatsForSet(set, hours, callback) {
 		callback(null, termsArr);
 	});
 }
+
+function getDailyStatsForSet(set, day, numDays, callback) {
+	var daysArr = [];
+
+	day = new Date(day);
+	day.setHours(0, 0, 0, 0);
+
+	async.whilst(function() {
+		return numDays--;
+	}, function(next) {
+		getHourlyStatsForSet(set, day.getTime()-(1000*60*60*24*numDays), 24, function(err, day) {
+			if (err) {
+				return next(err);
+			}
+
+			daysArr.push(day.reduce(function(cur, next) {
+				return cur+next;
+			}));
+			next();
+		});
+	}, function(err) {
+		callback(err, daysArr);
+	});
+};
 
 SocketAdmin.getMoreEvents = function(socket, next, callback) {
 	var start = parseInt(next, 10);

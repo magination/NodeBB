@@ -7,7 +7,6 @@ var	meta = require('../meta'),
 	async = require('async'),
 
 	server = require('./'),
-	rooms = require('./rooms'),
 
 	SocketModules = {
 		chats: {},
@@ -28,6 +27,17 @@ SocketModules.chats.get = function(socket, data, callback) {
 		since: data.since,
 		isNew: false
 	}, callback);
+
+	// Mark chat as read
+	Messaging.markRead(socket.uid, data.touid);
+};
+
+SocketModules.chats.getRaw = function(socket, data, callback) {
+	if(!data || !data.hasOwnProperty('mid')) {
+		return callback(new Error('[[error:invalid-data]]'));
+	}
+
+	Messaging.getMessageField(data.mid, 'content', callback);
 };
 
 SocketModules.chats.send = function(socket, data, callback) {
@@ -62,6 +72,32 @@ SocketModules.chats.send = function(socket, data, callback) {
 		});
 	});
 };
+
+SocketModules.chats.edit = function(socket, data, callback) {
+	if (!data) {
+		return callback(new Error('[[error:invalid-data]]'));
+	}
+
+	Messaging.canEdit(data.mid, socket.uid, function(err, allowed) {
+		if (allowed) {
+			Messaging.editMessage(data.mid, data.message, callback);
+		} else {
+			return callback(new Error('[[error:cant-edit-chat-message]]'));
+		}
+	});
+};
+
+SocketModules.chats.delete = function(socket, data, callback) {
+	if (!data) {
+		return callback(new Error('[[error:invalid-data]]'));
+	}
+
+	Messaging.canEdit(data.messageId, socket.uid, function(err, allowed) {
+		if (allowed) {
+			Messaging.deleteMessage(data.messageId, callback);
+		}
+	});
+}
 
 SocketModules.chats.canMessage = function(socket, toUid, callback) {
 	Messaging.canMessage(socket.uid, toUid, function(err, allowed) {
@@ -103,37 +139,6 @@ SocketModules.chats.getRecentChats = function(socket, data, callback) {
 		stop = start + 9;
 
 	Messaging.getRecentChats(socket.uid, start, stop, callback);
-};
-
-SocketModules.chats.sync = function(socket, data, callback) {
-	var chats = [],
-		uids = [],
-		socketIds = rooms.clients('uid_' + socket.uid);
-
-	rooms.broadcast(socket, 'uid_' + socket.uid, 'query:chats.sync', {}, function(err, sessionData) {
-		sessionData.forEach(function(data) {
-			data.forEach(function(chat) {
-				if (uids.indexOf(chat.uid) === -1) {
-					chats.push(chat);
-					uids.push(chat.uid);
-				}
-			});
-		});
-
-		callback(err, chats);
-	});
-};
-
-SocketModules.chats.open = function(socket, data, callback) {
-	rooms.broadcast(socket, 'uid_' + socket.uid, 'event:chats.open', data);
-};
-
-SocketModules.chats.close = function(socket, data, callback) {
-	rooms.broadcast(socket, 'uid_' + socket.uid, 'event:chats.close', data);
-};
-
-SocketModules.chats.toggleNew = function(socket, data, callback) {
-	rooms.broadcast(socket, 'uid_' + socket.uid, 'event:chats.toggleNew', data);
 };
 
 

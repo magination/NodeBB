@@ -52,7 +52,6 @@ module.exports = function(Meta) {
 				'public/src/client/recent.js',
 				'public/src/client/unread.js',
 				'public/src/client/topic.js',
-				'public/src/client/topic/browsing.js',
 				'public/src/client/topic/events.js',
 				'public/src/client/topic/flag.js',
 				'public/src/client/topic/fork.js',
@@ -130,7 +129,7 @@ module.exports = function(Meta) {
 			 * Check if the parent process is running with the debug option --debug (or --debug-brk)
 			 */
 			var forkProcessParams = {};
-			if(global.v8debug) {
+			if(global.v8debug || process.execArgv.indexOf('--debug') != -1) {
 				/**
 				 * use the line below if you want to debug minifier.js script too (or even --debug-brk option, but
 				 * you'll have to setup your debugger and connect to the forked process)

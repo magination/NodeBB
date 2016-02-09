@@ -64,29 +64,25 @@ var async = require('async'),
 	}
 
 	function getNotificationsFromSet(set, read, uid, start, stop, callback) {
-		db.getSortedSetRevRange(set, start, stop, function(err, nids) {
-			if (err) {
-				return callback(err);
-			}
+		var setNids;
 
-			if(!Array.isArray(nids) || !nids.length) {
-				return callback(null, []);
-			}
-
-			UserNotifications.getNotifications(nids, uid, function(err, notifications) {
-				if (err) {
-					return callback(err);
+		async.waterfall([
+			async.apply(db.getSortedSetRevRange, set, start, stop),
+			function(nids, next) {
+				if(!Array.isArray(nids) || !nids.length) {
+					return callback(null, []);
 				}
 
+				setNids = nids;
+				UserNotifications.getNotifications(nids, uid, next);
+			},
+			function(notifs, next) {
 				var deletedNids = [];
 
-				notifications.forEach(function(notification, index) {
+				notifs.forEach(function(notification, index) {
 					if (!notification) {
-						if (process.env.NODE_ENV === 'development') {
-							winston.info('[notifications.get] nid ' + nids[index] + ' not found. Removing.');
-						}
-
-						deletedNids.push(nids[index]);
+						winston.verbose('[notifications.get] nid ' + setNids[index] + ' not found. Removing.');
+						deletedNids.push(setNids[index]);
 					} else {
 						notification.read = read;
 						notification.readClass = !notification.read ? 'unread' : '';
@@ -97,9 +93,9 @@ var async = require('async'),
 					db.sortedSetRemove(set, deletedNids);
 				}
 
-				callback(null, notifications);
-			});
-		});
+				notifications.merge(notifs, next);
+			}
+		], callback);
 	}
 
 	UserNotifications.getNotifications = function(nids, uid, callback) {
@@ -130,9 +126,9 @@ var async = require('async'),
 				notification.path = pidToPaths[notification.pid] || notification.path || '';
 
 				if (notification.nid.startsWith('chat')) {
-					notification.path = nconf.get('relative_path') + '/chats/' + notification.user.userslug;
+					notification.path = '/chats/' + notification.user.userslug;
 				} else if (notification.nid.startsWith('follow')) {
-					notification.path = nconf.get('relative_path') + '/user/' + notification.user.userslug;
+					notification.path = '/user/' + notification.user.userslug;
 				}
 
 				notification.datetimeISO = utils.toISOString(notification.datetime);
@@ -176,7 +172,7 @@ var async = require('async'),
 					var postIndex = utils.isNumber(results.indices[index]) ? parseInt(results.indices[index], 10) + 1 : null;
 
 					if (slug && postIndex) {
-						pidToPaths[pid] = nconf.get('relative_path') + '/topic/' + slug + '/' + postIndex;
+						pidToPaths[pid] = '/topic/' + slug + '/' + postIndex;
 					}
 				});
 

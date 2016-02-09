@@ -46,17 +46,17 @@ uploadsController.upload = function(req, res, filesIterator, next) {
 
 uploadsController.uploadPost = function(req, res, next) {
 	uploadsController.upload(req, res, function(uploadedFile, next) {
-		file.isFileTypeAllowed(uploadedFile.path, file.allowedExtensions(), function(err) {
-			if (err) {
-				return next(err);
-			}
+		if (uploadedFile.type.match(/image./)) {
+			file.isFileTypeAllowed(uploadedFile.path, function(err) {
+				if (err) {
+					return next(err);
+				}
 
-			if (uploadedFile.type.match(/image./)) {
 				uploadImage(req.user.uid, uploadedFile, next);
-			} else {
-				uploadFile(req.user.uid, uploadedFile, next);
-			}
-		});
+			});
+		} else {
+			uploadFile(req.user.uid, uploadedFile, next);
+		}
 	}, next);
 };
 
@@ -67,13 +67,13 @@ uploadsController.uploadThumb = function(req, res, next) {
 	}
 
 	uploadsController.upload(req, res, function(uploadedFile, next) {
-		file.isFileTypeAllowed(uploadedFile.path, file.allowedExtensions(), function(err) {
+		file.isFileTypeAllowed(uploadedFile.path, function(err) {
 			if (err) {
 				return next(err);
 			}
 
 			if (uploadedFile.type.match(/image./)) {
-				var size = meta.config.topicThumbSize || 120;
+				var size = parseInt(meta.config.topicThumbSize, 10) || 120;
 				image.resizeImage({
 					path: uploadedFile.path,
 					extension: path.extname(uploadedFile.name),
@@ -93,7 +93,7 @@ uploadsController.uploadThumb = function(req, res, next) {
 };
 
 uploadsController.uploadGroupCover = function(data, next) {
-	uploadImage(0/*req.user.uid*/, data, next);
+	uploadImage(0, data, next);
 };
 
 function uploadImage(uid, image, callback) {
@@ -123,6 +123,14 @@ function uploadFile(uid, uploadedFile, callback) {
 
 	if (uploadedFile.size > parseInt(meta.config.maximumFileSize, 10) * 1024) {
 		return callback(new Error('[[error:file-too-big, ' + meta.config.maximumFileSize + ']]'));
+	}
+
+	if (meta.config.hasOwnProperty('allowedFileExtensions')) {
+		var allowed = meta.config.allowedFileExtensions.split(',').filter(Boolean);
+		var extension = path.extname(uploadedFile.name).slice(1);
+		if (allowed.length > 0 && allowed.indexOf(extension) === -1) {
+			return callback(new Error('[[error:invalid-file-type, ' + allowed.join('&#44; ') + ']]'));
+		}
 	}
 
 	var filename = uploadedFile.name || 'upload';

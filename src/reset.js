@@ -2,6 +2,7 @@
 
 var winston = require('winston');
 var nconf = require('nconf');
+var async = require('async');
 var db = require('./database');
 
 var Reset = {};
@@ -81,11 +82,29 @@ function resetThemes(callback) {
 }
 
 function resetPlugin(pluginId) {
-	db.sortedSetRemove('plugins:active', pluginId, function(err) {
+	var active = false;
+
+	async.waterfall([
+		async.apply(db.isSortedSetMember, 'plugins:active', pluginId),
+		function(isMember, next) {
+			active = isMember;
+
+			if (isMember) {
+				db.sortedSetRemove('plugins:active', pluginId, next);
+			} else {
+				next();
+			}
+		}
+	], function(err) {
 		if (err) {
 			winston.error('[reset] Could not disable plugin: %s encountered error %s', pluginId, err.message);
 		} else {
-			winston.info('[reset] Plugin `%s` disabled', pluginId);
+			if (active) {
+				winston.info('[reset] Plugin `%s` disabled', pluginId);
+			} else {
+				winston.warn('[reset] Plugin `%s` was not active on this forum', pluginId);
+				winston.info('[reset] No action taken.');
+			}
 		}
 
 		process.exit();
@@ -104,7 +123,7 @@ function resetPlugins(callback) {
 }
 
 function resetWidgets(callback) {
-	require('./src/widgets').reset(function(err) {
+	require('./widgets').reset(function(err) {
 		winston.info('[reset] All Widgets moved to Draft Zone');
 		if (typeof callback === 'function') {
 			callback(err);

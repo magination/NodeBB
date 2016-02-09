@@ -4,19 +4,16 @@
 /* globals config, app, ajaxify, define, socket, templates, translator, utils */
 
 define('forum/topic/events', [
-	'forum/topic/browsing',
 	'forum/topic/postTools',
 	'forum/topic/threadTools',
 	'forum/topic/posts',
 	'components'
-], function(browsing, postTools, threadTools, posts, components) {
+], function(postTools, threadTools, posts, components) {
 
 	var Events = {};
 
 	var events = {
-		'event:user_enter': browsing.onUserEnter,
-		'event:user_leave': browsing.onUserLeave,
-		'event:user_status_change': browsing.onUserStatusChange,
+		'event:user_status_change': onUserStatusChange,
 		'event:voted': updatePostVotesAndUserReputation,
 		'event:favourited': updateFavouriteCount,
 
@@ -69,6 +66,10 @@ define('forum/topic/events', [
 		}
 	};
 
+	function onUserStatusChange(data) {
+		app.updateUserStatus($('[data-uid="' + data.uid + '"] [component="user/status"]'), data.status);
+	}
+
 	function updatePostVotesAndUserReputation(data) {
 		var votes = components.get('post/vote-count', data.post.pid),
 			reputationElements = $('.reputation[data-uid="' + data.post.uid + '"]');
@@ -81,7 +82,7 @@ define('forum/topic/events', [
 		$('[data-pid="' + data.post.pid + '"] .favouriteCount').html(data.post.reputation).attr('data-favourites', data.post.reputation);
 	}
 
-	function onTopicPurged(data) {
+	function onTopicPurged() {
 		if (ajaxify.data.category && ajaxify.data.category.slug) {
 			ajaxify.go('category/' + ajaxify.data.category.slug, null, true);
 		}
@@ -118,6 +119,7 @@ define('forum/topic/events', [
 			editedPostEl.html(data.post.content);
 			editedPostEl.find('img:not(.not-responsive)').addClass('img-responsive');
 			app.replaceSelfLinks(editedPostEl.find('a'));
+			posts.wrapImagesInLinks(editedPostEl.parent());
 			editedPostEl.fadeIn(250);
 			$(window).trigger('action:posts.edited', data);
 		});
@@ -162,6 +164,8 @@ define('forum/topic/events', [
 	function onPostPurged(pid) {
 		components.get('post', 'pid', pid).fadeOut(500, function() {
 			$(this).remove();
+			ajaxify.data.postcount --;
+			postTools.updatePostCount(ajaxify.data.postcount);
 			posts.showBottomPostBar();
 		});
 

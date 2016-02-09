@@ -2,6 +2,7 @@
 
 var nconf = require('nconf'),
 	async = require('async'),
+	S = require('string'),
 
 	user = require('../../user'),
 	posts = require('../../posts'),
@@ -72,8 +73,48 @@ profileController.get = function(req, res, callback) {
 			userData.isFollowing = results.isFollowing;
 			userData.breadcrumbs = helpers.buildBreadcrumbs([{text: userData.username}]);
 			userData.title = userData.username;
+
+			userData['cover:url'] = userData['cover:url'] || require('../../coverPhoto').getDefaultProfileCover(userData.uid);
+			userData['cover:position'] = userData['cover:position'] || '50% 50%';
+
 			if (!userData.profileviews) {
 				userData.profileviews = 1;
+			}
+
+			var plainAboutMe = userData.aboutme ? S(userData.aboutme).decodeHTMLEntities().stripTags().s : '';
+
+			res.locals.metaTags = [
+				{
+					name: "title",
+					content: userData.fullname || userData.username
+				},
+				{
+					name: "description",
+					content: plainAboutMe
+				},
+				{
+					property: 'og:title',
+					content: userData.fullname || userData.username
+				},
+				{
+					property: 'og:description',
+					content: plainAboutMe
+				}
+			];
+
+			if (userData.picture) {
+				res.locals.metaTags.push(
+					{
+						property: 'og:image',
+						content: userData.picture,
+						noEscape: true
+					},
+					{
+						property: "og:image:url",
+						content: userData.picture,
+						noEscape: true
+					}
+				);
 			}
 
 			plugins.fireHook('filter:user.account', {userData: userData, uid: req.uid}, next);

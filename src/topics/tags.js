@@ -18,29 +18,31 @@ module.exports = function(Topics) {
 			return callback();
 		}
 
-		plugins.fireHook('filter:tags.filter', {tags: tags, tid: tid}, function(err, data) {
-			if (err) {
-				return callback(err);
-			}
-
-			tags = data.tags.slice(0, meta.config.maximumTagsPerTopic || 5);
-
-			async.each(tags, function(tag, next) {
-				tag = Topics.cleanUpTag(tag);
-
-				if (tag.length < (meta.config.minimumTagLength || 3)) {
-					return next();
-				}
-				db.setAdd('topic:' + tid + ':tags', tag);
-
-				db.sortedSetAdd('tag:' + tag + ':topics', timestamp, tid, function(err) {
-					if (!err) {
-						updateTagCount(tag);
-					}
-					next(err);
+		async.waterfall([
+			function (next) {
+				plugins.fireHook('filter:tags.filter', {tags: tags, tid: tid}, next);
+			},
+			function (data, next) {
+				tags = data.tags.slice(0, meta.config.maximumTagsPerTopic || 5);
+				tags = tags.map(Topics.cleanUpTag).filter(function(tag) {
+					return tag && tag.length >= (meta.config.minimumTagLength || 3);
 				});
-			}, callback);
-		});
+
+				var keys = tags.map(function(tag) {
+					return 'tag:' + tag + ':topics';
+				});
+
+				async.parallel([
+					async.apply(db.setAdd, 'topic:' + tid + ':tags', tags),
+					async.apply(db.sortedSetsAdd, keys, timestamp, tid)
+				], function(err) {
+					if (err) {
+						return next(err);
+					}
+					async.each(tags, updateTagCount, next);
+				});
+			}
+		], callback);
 	};
 
 	Topics.cleanUpTag = function(tag) {
@@ -64,9 +66,10 @@ module.exports = function(Topics) {
 	function updateTagCount(tag, callback) {
 		callback = callback || function() {};
 		Topics.getTagTopicCount(tag, function(err, count) {
-			if (err || !count) {
+			if (err) {
 				return callback(err);
 			}
+			count = count || 0;
 
 			db.sortedSetAdd('tags:topic:count', count, tag, callback);
 		});
@@ -319,4 +322,33 @@ module.exports = function(Topics) {
 		});
 	};
 
+	Topics.getRelatedTopics = function(topicData, uid, callback) {
+		if (plugins.hasListeners('filter:topic.getRelatedTopics')) {
+			return plugins.fireHook('filter:topic.getRelatedTopics', {topic: topicData, uid: uid}, callback);
+		}
+
+		var maximumTopics = parseInt(meta.config.maximumRelatedTopics, 10) || 5;
+
+		if (!topicData.tags.length || maximumTopics === 0) {
+			return callback(null, []);
+		}
+
+		async.waterfall([
+			function (next) {
+				async.map(topicData.tags, function (tag, next) {
+					Topics.getTagTids(tag.value, 0, 5, next);
+				}, next);
+			},
+			function (tids, next) {
+				tids = _.shuffle(_.unique(_.flatten(tids))).slice(0, maximumTopics);
+				Topics.getTopics(tids, uid, next);
+			},
+			function (topics, next) {
+				topics = topics.filter(function(topic) {
+					return topic && !topic.deleted && parseInt(topic.uid, 10) !== parseInt(uid, 10);
+				});
+				next(null, topics);
+			}
+		], callback);
+	};
 };

@@ -15,6 +15,7 @@
     "chat.seven_days": "7 días",
     "chat.thirty_days": "30 días",
     "chat.three_months": "3 meses",
+    "chat.delete_message_confirm": "Are you sure you wish to delete this message?",
     "composer.compose": "Crear",
     "composer.show_preview": "Ver Previsualización",
     "composer.hide_preview": "Ocultar Previsualización",
@@ -23,7 +24,11 @@
     "composer.discard": "¿Estás seguro de que deseas descartar este mensaje?",
     "composer.submit_and_lock": "Enviar y Bloquear",
     "composer.toggle_dropdown": "Alternar desplegable",
+    "composer.uploading": "Subiendo %1",
     "bootbox.ok": "OK",
     "bootbox.cancel": "Cancelar",
-    "bootbox.confirm": "Confirmar"
+    "bootbox.confirm": "Confirmar",
+    "cover.dragging_title": "Colocar la foto de portada",
+    "cover.dragging_message": "Arrastra la foto de portada al lugar que quieras y haz click en \"Guardar\"",
+    "cover.saved": "Imagen y posición de la foto de portada guardadas."
 }

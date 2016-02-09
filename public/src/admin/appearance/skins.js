@@ -5,19 +5,27 @@ define('admin/appearance/skins', function() {
 	var Skins = {};
 	
 	Skins.init = function() {
-		var scriptEl = $('<script />');
-		scriptEl.attr('src', '//bootswatch.aws.af.cm/3/?callback=bootswatchListener');
-		$('body').append(scriptEl);
+		// Populate skins from Bootswatch API
+		$.ajax({
+			method: 'get',
+			url: 'https://bootswatch.com/api/3.json'
+		}).done(Skins.render);
 
 		$('#skins').on('click', function(e){
-			var target = $(e.target),
-				action = target.attr('data-action');
+			var target = $(e.target);
+
+			if (!target.attr('data-action')) {
+				target = target.parents('[data-action]');
+			}
+
+			var action = target.attr('data-action');
 
 			if (action && action === 'use') {
 				var parentEl = target.parents('[data-theme]'),
 					themeType = parentEl.attr('data-type'),
 					cssSrc = parentEl.attr('data-css'),
 					themeId = parentEl.attr('data-theme');
+
 
 				socket.emit('admin.themes.set', {
 					type: themeType,

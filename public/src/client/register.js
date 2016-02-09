@@ -28,7 +28,7 @@ define('forum/register', ['csrf', 'translator'], function(csrf, translator) {
 
 		var query = utils.params();
 		if (query.email && query.token) {
-			email.val(query.email);
+			email.val(decodeURIComponent(query.email));
 			$('#token').val(query.token);
 		}
 
@@ -84,7 +84,12 @@ define('forum/register', ['csrf', 'translator'], function(csrf, translator) {
 							if (data.referrer) {
 								window.location.href = data.referrer;
 							} else if (data.message) {
-								app.alert({message: data.message, timeout: 20000});
+								require(['translator'], function(translator) {
+									translator.translate(data.message, function(msg) {
+										bootbox.alert(msg);
+										ajaxify.go('/');
+									});
+								});
 							}
 						},
 						error: function(data, status) {
@@ -155,7 +160,7 @@ define('forum/register', ['csrf', 'translator'], function(csrf, translator) {
 			socket.emit('user.exists', {
 				username: username
 			}, function(err, exists) {
-				if(err) {
+				if (err) {
 					return app.alertError(err.message);
 				}
 

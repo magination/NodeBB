@@ -56,9 +56,11 @@
     "posted_ago_by_guest": "ارسال شده در %1 توسط مهمان",
     "posted_ago_by": "ارسال شده در %1 توسط %2",
     "posted_ago": "ارسال شده در %1",
-    "posted_in_ago_by_guest": "ارسال شده در %1 %2 توسط مهمان",
-    "posted_in_ago_by": "ارسال شده در %1 %2 توسط %3",
+    "posted_in": "پست شده در 1%",
+    "posted_in_by": "پشت شده در 1% توسط 2%",
     "posted_in_ago": "ارسال شده در %1 %2",
+    "posted_in_ago_by": "ارسال شده در %1 %2 توسط %3",
+    "posted_in_ago_by_guest": "ارسال شده در %1 %2 توسط مهمان",
     "replied_ago": "پاسخ داده شده در %1",
     "user_posted_ago": "%1 در %2 ارسال کرده است",
     "guest_posted_ago": "مهمان در %1 ارسال کرده است",
@@ -68,7 +70,7 @@
     "recentposts": "دیدگاه‌های تازه",
     "recentips": "آخرین IPها",
     "away": "دور از دسترس",
-    "dnd": "Do not disturb",
+    "dnd": "مزاحم نشوید",
     "invisible": "مخفی",
     "offline": "آفلاین",
     "email": "رایانامه",
@@ -81,5 +83,5 @@
     "follow": "دنبال کن",
     "unfollow": "دنبال نکن",
     "delete_all": "حذف همه",
-    "map": "Map"
+    "map": "نقشه"
 }

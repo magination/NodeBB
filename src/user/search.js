@@ -3,7 +3,6 @@
 
 var async = require('async'),
 	meta = require('../meta'),
-	pagination = require('../pagination'),
 	plugins = require('../plugins'),
 	db = require('../database');
 
@@ -42,9 +41,11 @@ module.exports = function(User) {
 				searchResult.matchCount = uids.length;
 
 				if (paginate) {
-					var pagination = User.paginate(page, uids);
-					uids = pagination.data;
-					searchResult.pagination = pagination.pagination;
+					var resultsPerPage = parseInt(meta.config.userSearchResultsPerPage, 10) || 20;
+					var start = Math.max(0, page - 1) * resultsPerPage;
+					var stop = start + resultsPerPage;
+					searchResult.pageCount = Math.ceil(uids.length / resultsPerPage);
+					uids = uids.slice(start, stop);
 				}
 
 				User.getUsers(uids, uid, next);
@@ -55,21 +56,6 @@ module.exports = function(User) {
 				next(null, searchResult);
 			}
 		], callback);
-	};
-
-	User.paginate = function(page, data) {
-		var resultsPerPage = parseInt(meta.config.userSearchResultsPerPage, 10) || 20;
-		var start = Math.max(0, page - 1) * resultsPerPage;
-		var stop = start + resultsPerPage;
-
-		var pageCount = Math.ceil(data.length / resultsPerPage);
-		var currentPage = Math.max(1, Math.ceil((start + 1) / resultsPerPage));
-
-		return {
-			pagination: pagination.create(currentPage, pageCount),
-			pageCount: pageCount,
-			data: data.slice(start, stop)
-		};
 	};
 
 	function findUids(query, searchBy, callback) {
@@ -98,29 +84,16 @@ module.exports = function(User) {
 	function filterAndSortUids(uids, data, callback) {
 		var sortBy = data.sortBy || 'joindate';
 
-		var fields = ['uid', 'status', sortBy];
+		var fields = ['uid', 'status', 'lastonline', sortBy];
 
-		async.parallel({
-			userData: function(next) {
-				User.getUsersFields(uids, fields, next);
-			},
-			isOnline: function(next) {
-				if (data.onlineOnly) {
-					require('../socket.io').isUsersOnline(uids, next);
-				} else {
-					next();
-				}
-			}
-		}, function(err, results) {
+		User.getUsersFields(uids, fields, function(err, userData) {
 			if (err) {
 				return callback(err);
 			}
 
-			var userData = results.userData;
-
 			if (data.onlineOnly) {
-				userData = userData.filter(function(user, index) {
-					return user && user.status !== 'offline' && results.isOnline[index];
+				userData = userData.filter(function(user) {
+					return user && user.status !== 'offline' && (Date.now() - parseInt(user.lastonline, 10) < 300000);
 				});
 			}
 

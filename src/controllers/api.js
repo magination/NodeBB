@@ -57,6 +57,7 @@ apiController.getConfig = function(req, res, next) {
 	config.allowProfileImageUploads = parseInt(meta.config.allowProfileImageUploads) === 1;
 	config.allowTopicsThumbnail = parseInt(meta.config.allowTopicsThumbnail, 10) === 1;
 	config.allowAccountDelete = parseInt(meta.config.allowAccountDelete, 10) === 1;
+	config.allowUserHomePage = parseInt(meta.config.allowUserHomePage, 10) === 1;
 	config.privateUserInfo = parseInt(meta.config.privateUserInfo, 10) === 1;
 	config.privateTagListing = parseInt(meta.config.privateTagListing, 10) === 1;
 	config.usePagination = parseInt(meta.config.usePagination, 10) === 1;
@@ -84,6 +85,7 @@ apiController.getConfig = function(req, res, next) {
 	config.categoryTopicSort = meta.config.categoryTopicSort || 'newest_to_oldest';
 	config.csrf_token = req.csrfToken();
 	config.searchEnabled = plugins.hasListeners('filter:search.query');
+	config.bootswatchSkin = 'default';
 
 	if (!req.user) {
 		return filterConfig();
@@ -103,6 +105,7 @@ apiController.getConfig = function(req, res, next) {
 		config.topicPostSort = settings.topicPostSort || config.topicPostSort;
 		config.categoryTopicSort = settings.categoryTopicSort || config.categoryTopicSort;
 		config.topicSearchEnabled = settings.topicSearchEnabled || false;
+		config.bootswatchSkin = settings.bootswatchSkin || config.bootswatchSkin;
 
 		filterConfig();
 	});
@@ -110,13 +113,11 @@ apiController.getConfig = function(req, res, next) {
 
 
 apiController.renderWidgets = function(req, res, next) {
-	var async = require('async'),
-		areas = {
-			template: req.query.template,
-			locations: req.query.locations,
-			url: req.query.url
-		},
-		renderedWidgets = [];
+	var areas = {
+		template: req.query.template,
+		locations: req.query.locations,
+		url: req.query.url
+	};
 
 	if (!areas.template || !areas.locations) {
 		return res.status(200).json({});
@@ -178,6 +179,36 @@ apiController.getObject = function(req, res, next) {
 apiController.getUserByUID = function(req, res, next) {
 	var uid = req.params.uid ? req.params.uid : 0;
 
+	getUserByUID(uid, res, next);
+};
+
+apiController.getUserByUsername = function(req, res, next) {
+	var username = req.params.username ? req.params.username : 0;
+
+	async.waterfall([
+		function(next) {
+			user.getUidByUsername(username, next);
+		},
+		function(uid, next) {
+			getUserByUID(uid, res, next);
+		}
+	], next);
+};
+
+apiController.getUserByEmail = function(req, res, next) {
+	var email = req.params.email ? req.params.email : 0;
+
+	async.waterfall([
+		function(next) {
+			user.getUidByEmail(email, next);
+		},
+		function(uid, next) {
+			getUserByUID(uid, res, next);
+		}
+	], next);
+};
+
+function getUserByUID(uid, res, next) {
 	async.parallel({
 		userData: async.apply(user.getUserData, uid),
 		settings: async.apply(user.getSettings, uid)
@@ -191,8 +222,7 @@ apiController.getUserByUID = function(req, res, next) {
 
 		res.json(results.userData);
 	});
-};
-
+}
 
 apiController.getModerators = function(req, res, next) {
 	categories.getModerators(req.params.cid, function(err, moderators) {

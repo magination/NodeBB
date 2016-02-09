@@ -1,21 +1,39 @@
 "use strict";
 
-var	fs = require('fs'),
-	async = require('async'),
-	path = require('path'),
+var	async = require('async'),
 	winston = require('winston'),
+	nconf = require('nconf'),
 	templates = require('templates.js'),
+	nodemailer = require('nodemailer'),
+	htmlToText = require('html-to-text'),
+	url = require('url'),
 
 	User = require('./user'),
 	Plugins = require('./plugins'),
 	meta = require('./meta'),
 	translator = require('../public/src/modules/translator'),
 
+	transports = {
+		direct: nodemailer.createTransport('direct'),
+		gmail: undefined
+	},
 	app;
 
 (function(Emailer) {
 	Emailer.registerApp = function(expressApp) {
 		app = expressApp;
+
+		// Enable Gmail transport if enabled in ACP
+		if (parseInt(meta.config['email:GmailTransport:enabled'], 10) === 1) {
+			transports.gmail = nodemailer.createTransport('SMTP', {
+				service: 'Gmail',
+				auth: {
+					user: meta.config['email:GmailTransport:user'],
+					pass: meta.config['email:GmailTransport:pass']
+				}
+			});
+		}
+
 		return Emailer;
 	};
 
@@ -45,38 +63,7 @@ var	fs = require('fs'),
 	};
 
 	Emailer.sendToEmail = function(template, email, language, params, callback) {
-		function renderAndTranslate(tpl, params, callback) {
-			async.waterfall([
-				function(next) {
-					render('emails/partials/footer' + (tpl.indexOf('_plaintext') !== -1 ? '_plaintext' : ''), params, next);
-				},
-				function(footer, next) {
-					params.footer = footer;
-					render(tpl, params, next);
-				},
-				function(html, next) {
-					translator.translate(html, lang, function(translated) {
-						next(null, translated);
-					});
-				}
-			], callback);
-		}
-
-		function render(tpl, params, next) {
-			if (meta.config['email:custom:' + tpl.replace('emails/', '')]) {
-				var text = templates.parse(meta.config['email:custom:' + tpl.replace('emails/', '')], params);
-				next(null, text);
-			} else {
-				app.render(tpl, params, next);
-			}
-		}
-
 		callback = callback || function() {};
-
-		if (!Plugins.hasListeners('filter:email.send')) {
-			winston.warn('[emailer] No active email plugin found to send "' + template + '" email');
-			return callback();
-		}
 
 		var lang = language || meta.config.defaultLang || 'en_GB';
 
@@ -84,10 +71,7 @@ var	fs = require('fs'),
 			function (next) {
 				async.parallel({
 					html: function(next) {
-						renderAndTranslate('emails/' + template, params, next);
-					},
-					plaintext: function(next) {
-						renderAndTranslate('emails/' + template + '_plaintext', params, next);
+						renderAndTranslate('emails/' + template, params, lang, next);
 					},
 					subject: function(next) {
 						translator.translate(params.subject, lang, function(translated) {
@@ -99,11 +83,13 @@ var	fs = require('fs'),
 			function (results, next) {
 				var data = {
 					to: email,
-					from: meta.config['email:from'] || 'no-reply@localhost.lan',
+					from: meta.config['email:from'] || 'no-reply@' + getHostname(),
 					from_name: meta.config['email:from_name'] || 'NodeBB',
 					subject: results.subject,
 					html: results.html,
-					plaintext: results.plaintext,
+					plaintext: htmlToText.fromString(results.html, {
+						ignoreImage: true
+					}),
 					template: template,
 					uid: params.uid,
 					pid: params.pid,
@@ -112,14 +98,58 @@ var	fs = require('fs'),
 				Plugins.fireHook('filter:email.modify', data, next);
 			},
 			function (data, next) {
-				Plugins.fireHook('filter:email.send', data, next);
+				if (Plugins.hasListeners('filter:email.send')) {
+					Plugins.fireHook('filter:email.send', data, next);
+				} else {
+					Emailer.sendViaFallback(data, next);
+				}
 			}
-		], function (err, data) {
+		], function (err) {
 			callback(err);
 		});
 	};
 
+	Emailer.sendViaFallback = function(data, callback) {
+		// Some minor alterations to the data to conform to nodemailer standard
+		data.text = data.plaintext;
+		delete data.plaintext;
 
+		winston.verbose('[emailer] Sending email to uid ' + data.uid);
+		transports[transports.gmail ? 'gmail' : 'direct'].sendMail(data, callback);
+	};
+
+	function render(tpl, params, next) {
+		if (meta.config['email:custom:' + tpl.replace('emails/', '')]) {
+			var text = templates.parse(meta.config['email:custom:' + tpl.replace('emails/', '')], params);
+			next(null, text);
+		} else {
+			app.render(tpl, params, next);
+		}
+	}
+
+	function renderAndTranslate(tpl, params, lang, callback) {
+		async.waterfall([
+			function(next) {
+				render('emails/partials/footer' + (tpl.indexOf('_plaintext') !== -1 ? '_plaintext' : ''), params, next);
+			},
+			function(footer, next) {
+				params.footer = footer;
+				render(tpl, params, next);
+			},
+			function(html, next) {
+				translator.translate(html, lang, function(translated) {
+					next(null, translated);
+				});
+			}
+		], callback);
+	}
+
+	function getHostname() {
+		var configUrl = nconf.get('url'),
+			parsed = url.parse(configUrl);
+
+		return parsed.hostname;
+	};
 
 }(module.exports));
 

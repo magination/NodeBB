@@ -145,7 +145,7 @@ define('forum/topic/posts', [
 
 		$(window).trigger('action:posts.loading', {posts: data.posts, after: after, before: before});
 
-		infinitescroll.parseAndTranslate('topic', 'posts', data, function(html) {
+		app.parseAndTranslate('topic', 'posts', data, function(html) {
 			if (after) {
 				html.insertAfter(after);
 			} else if (before) {
@@ -211,25 +211,36 @@ define('forum/topic/posts', [
 	};
 
 	Posts.processPage = function(posts) {
+		Posts.showBottomPostBar();
+		posts.find('[component="post/content"] img:not(.not-responsive)').addClass('img-responsive');
 		app.createUserTooltips(posts);
 		app.replaceSelfLinks(posts.find('a'));
 		utils.addCommasToNumbers(posts.find('.formatted-number'));
 		utils.makeNumbersHumanReadable(posts.find('.human-readable-number'));
 		posts.find('.timeago').timeago();
+		Posts.wrapImagesInLinks(posts);
+
+		addBlockquoteEllipses(posts.find('[component="post/content"] > blockquote > blockquote'));
+		hidePostToolsForDeletedPosts(posts);
+	};
+
+	Posts.wrapImagesInLinks = function(posts) {
 		posts.find('[component="post/content"] img:not(.emoji)').each(function() {
 			var $this = $(this);
 			if (!$this.parent().is('a')) {
 				$this.wrap('<a href="' + $this.attr('src') + '" target="_blank">');
 			}
 		});
-
-		addBlockquoteEllipses(posts.find('[component="post/content"] > blockquote > blockquote'));
-		hidePostToolsForDeletedPosts(posts);
-		Posts.showBottomPostBar();
 	};
 
 	Posts.showBottomPostBar = function() {
-		$('.bottom-post-bar').toggleClass('hidden', components.get('post').length <= 1 && !!components.get('post', 'index', 0).length);
+		var mainPost = components.get('post', 'index', 0);
+		var posts = $('[component="post"]');
+		if (!!mainPost.length && posts.length > 1 && $('.post-bar').length < 2) {
+			$('.post-bar').clone().appendTo(mainPost);
+		} else if (mainPost.length && posts.length < 2) {
+			mainPost.find('.post-bar').remove();
+		}
 	};
 
 	function hidePostToolsForDeletedPosts(posts) {

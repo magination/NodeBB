@@ -10,6 +10,7 @@ var async = require('async'),
 	posts = require('../posts'),
 	topics = require('../topics'),
 	plugins = require('../plugins'),
+	sitemap = require('../sitemap'),
 	categories = require('../categories'),
 	privileges = require('../privileges'),
 	helpers = require('./helpers');
@@ -32,22 +33,36 @@ var Controllers = {
 
 
 Controllers.home = function(req, res, next) {
-	var route = meta.config.homePageRoute || meta.config.homePageCustom || 'categories',
-		hook = 'action:homepage.get:' + route;
+	var route = meta.config.homePageRoute || meta.config.homePageCustom || 'categories';
 
-	if (plugins.hasListeners(hook)) {
-		plugins.fireHook(hook, {req: req, res: res, next: next});
-	} else {
-		if (route === 'categories' || route === '/') {
-			Controllers.categories.list(req, res, next);
-		} else if (route === 'recent') {
-			Controllers.recent.get(req, res, next);
-		} else if (route === 'popular') {
-			Controllers.popular.get(req, res, next);
+	user.getSettings(req.uid, function(err, settings) {
+		if (!err && settings.homePageRoute !== 'undefined' && settings.homePageRoute !== 'none') route = settings.homePageRoute || route;
+
+		var hook = 'action:homepage.get:' + route;
+
+		if (plugins.hasListeners(hook)) {
+			plugins.fireHook(hook, {req: req, res: res, next: next});
 		} else {
-			res.redirect(route);
+			if (route === 'categories' || route === '/') {
+				Controllers.categories.list(req, res, next);
+			} else if (route === 'recent') {
+				Controllers.recent.get(req, res, next);
+			} else if (route === 'popular') {
+				Controllers.popular.get(req, res, next);
+			} else {
+				var match = /^category\/(\d+)\/(.*)$/.exec(route);
+
+				if (match) {
+					req.params.topic_index = "1";
+					req.params.category_id = match[1];
+					req.params.slug = match[2];
+					Controllers.categories.get(req, res, next);
+				} else {
+					res.redirect(route);
+				}
+			}
 		}
-	}
+	});
 };
 
 Controllers.reset = function(req, res, next) {
@@ -79,13 +94,10 @@ Controllers.reset = function(req, res, next) {
 Controllers.login = function(req, res, next) {
 	var data = {},
 		loginStrategies = require('../routes/authentication').getLoginStrategies(),
-		emailersPresent = plugins.hasListeners('filter:email.send');
-
-	var registrationType = meta.config.registrationType || 'normal';
+		registrationType = meta.config.registrationType || 'normal';
 
 	data.alternate_logins = loginStrategies.length > 0;
 	data.authentication = loginStrategies;
-	data.showResetLink = emailersPresent;
 	data.allowLocalLogin = parseInt(meta.config.allowLocalLogin, 10) === 1 || parseInt(req.query.local, 10) === 1;
 	data.allowRegistration = registrationType === 'normal' || registrationType === 'admin-approval';
 	data.allowLoginWith = '[[login:' + (meta.config.allowLoginWith || 'username-email') + ']]';
@@ -105,14 +117,14 @@ Controllers.register = function(req, res, next) {
 
 	async.waterfall([
 		function(next) {
-			if (registrationType === 'invite-only') {
+			if (registrationType === 'invite-only' || registrationType === 'admin-invite-only') {
 				user.verifyInvitation(req.query, next);
 			} else {
 				next();
 			}
 		},
 		function(next) {
-			plugins.fireHook('filter:parse.post', {postData: {content: meta.config.termsOfUse}}, next);
+			plugins.fireHook('filter:parse.post', {postData: {content: meta.config.termsOfUse || ''}}, next);
 		},
 		function(tos, next) {
 			var loginStrategies = require('../routes/authentication').getLoginStrategies();
@@ -161,14 +173,56 @@ Controllers.confirmEmail = function(req, res, next) {
 	});
 };
 
-Controllers.sitemap = function(req, res, next) {
+Controllers.sitemap = {};
+Controllers.sitemap.render = function(req, res, next) {
+	sitemap.render(function(err, tplData) {
+		Controllers.render('sitemap', tplData, function(err, xml) {
+			res.header('Content-Type', 'application/xml');
+			res.send(xml);
+		});
+	})
+};
+
+Controllers.sitemap.getPages = function(req, res, next) {
 	if (parseInt(meta.config['feeds:disableSitemap'], 10) === 1) {
 		return next();
 	}
 
-	var sitemap = require('../sitemap.js');
+	sitemap.getPages(function(err, xml) {
+		if (err) {
+			return next(err);
+		}
+		res.header('Content-Type', 'application/xml');
+		res.send(xml);
+	});
+};
 
-	sitemap.render(function(xml) {
+Controllers.sitemap.getCategories = function(req, res, next) {
+	if (parseInt(meta.config['feeds:disableSitemap'], 10) === 1) {
+		return next();
+	}
+
+	sitemap.getCategories(function(err, xml) {
+		if (err) {
+			return next(err);
+		}
+		res.header('Content-Type', 'application/xml');
+		res.send(xml);
+	});
+};
+
+Controllers.sitemap.getTopicPage = function(req, res, next) {
+	if (parseInt(meta.config['feeds:disableSitemap'], 10) === 1) {
+		return next();
+	}
+
+	sitemap.getTopicPage(parseInt(req.params[0], 10), function(err, xml) {
+		if (err) {
+			return next(err);
+		} else if (!xml) {
+			return next();
+		}
+
 		res.header('Content-Type', 'application/xml');
 		res.send(xml);
 	});

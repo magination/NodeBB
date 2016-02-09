@@ -122,7 +122,7 @@ var async = require('async'),
 
 				async.parallel({
 					users: function(next) {
-						user.getUsersFields(uids, ['uid', 'username', 'userslug', 'picture'], next);
+						user.getUsersFields(uids, ['uid', 'username', 'fullname', 'userslug', 'reputation', 'postcount', 'picture', 'signature', 'banned', 'status'], next);
 					},
 					categories: function(next) {
 						categories.getCategoriesFields(cids, ['cid', 'name', 'slug', 'icon', 'bgColor', 'color', 'disabled'], next);
@@ -204,6 +204,10 @@ var async = require('async'),
 				topicData.locked = parseInt(topicData.locked, 10) === 1;
 				topicData.pinned = parseInt(topicData.pinned, 10) === 1;
 
+				Topics.getRelatedTopics(topicData, uid, next);
+			},
+			function(related, next) {
+				topicData.related = related || [];
 				plugins.fireHook('filter:topic.get', {topic: topicData, uid: uid}, next);
 			},
 			function(data, next) {

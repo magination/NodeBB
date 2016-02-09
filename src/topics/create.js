@@ -251,11 +251,6 @@ module.exports = function(Topics) {
 					Topics.follow(postData.tid, uid);
 				}
 
-				posts.getPidIndex(postData.pid, postData.tid, settings.topicPostSort, next);
-			},
-			function(postIndex, next) {
-				postData.index = postIndex;
-
 				if (parseInt(uid, 10)) {
 					Topics.notifyFollowers(postData, uid);
 					user.setUserField(uid, 'lastonline', Date.now());
@@ -272,13 +267,13 @@ module.exports = function(Topics) {
 		var tid = postData.tid;
 		var uid = postData.uid;
 		async.waterfall([
-			function(next) {
+			function (next) {
 				Topics.markAsUnreadForAll(tid, next);
 			},
-			function(next) {
+			function (next) {
 				Topics.markAsRead([tid], uid, next);
 			},
-			function(next) {
+			function (markedRead, next) {
 				async.parallel({
 					userInfo: function(next) {
 						posts.getUserInfoForPosts([postData.uid], uid, next);
@@ -294,9 +289,10 @@ module.exports = function(Topics) {
 					}
 				}, next);
 			},
-			function(results, next) {
+			function (results, next) {
 				postData.user = results.userInfo[0];
 				postData.topic = results.topicInfo;
+				postData.index = parseInt(results.topicInfo.postcount, 10) - 1;
 
 				// Username override for guests, if enabled
 				if (parseInt(meta.config.allowGuestHandles, 10) === 1 && parseInt(postData.uid, 10) === 0 && data.handle) {

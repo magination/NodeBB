@@ -15,6 +15,7 @@
     "chat.seven_days": "7 dage",
     "chat.thirty_days": "30 dage",
     "chat.three_months": "3 måneder",
+    "chat.delete_message_confirm": "Are you sure you wish to delete this message?",
     "composer.compose": "Skriv",
     "composer.show_preview": "Vis forhåndsvisning",
     "composer.hide_preview": "Fjern forhåndsvisning",
@@ -23,7 +24,11 @@
     "composer.discard": "Er du sikker på at du vil kassere dette indlæg?",
     "composer.submit_and_lock": "Send og lås",
     "composer.toggle_dropdown": "Skift mellem dropdown",
+    "composer.uploading": "Uploader %1",
     "bootbox.ok": "OK",
     "bootbox.cancel": "Annuller",
-    "bootbox.confirm": "Bekræft"
+    "bootbox.confirm": "Bekræft",
+    "cover.dragging_title": "Cover Photo Positioning",
+    "cover.dragging_message": "Drag the cover photo to the desired position and click \"Save\"",
+    "cover.saved": "Cover photo image and position saved"
 }

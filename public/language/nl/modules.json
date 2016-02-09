@@ -15,6 +15,7 @@
     "chat.seven_days": "7 dagen",
     "chat.thirty_days": "30 dagen",
     "chat.three_months": "3 maanden",
+    "chat.delete_message_confirm": "Weet u het zeker dat u dit bericht wilt verwijderen?",
     "composer.compose": "Samenstellen",
     "composer.show_preview": "Voorbeeldweergave",
     "composer.hide_preview": "Verberg voorbeeld",
@@ -23,7 +24,11 @@
     "composer.discard": "Bericht plaatsen annuleren?",
     "composer.submit_and_lock": "Plaats een bericht en vergrendel direct het onderwerp",
     "composer.toggle_dropdown": "Keuzelijst schakelen",
+    "composer.uploading": "Uploaden van %1",
     "bootbox.ok": "OK",
     "bootbox.cancel": "Anuleren",
-    "bootbox.confirm": "Bevestig"
+    "bootbox.confirm": "Bevestig",
+    "cover.dragging_title": "Omslag Foto Positionering",
+    "cover.dragging_message": "Sleep de omslag foto voor de gewilde positie en klik \"Opslaan\"",
+    "cover.saved": "Omslag foto en positie opgeslagen"
 }

@@ -24,7 +24,10 @@
     "chats": "Chats",
     "chat": "Chatte mit %1",
     "account/edit": "Bearbeite %1",
-    "account/following": "Nutzer, die %1 folgt",
+    "account/edit/password": "Bearbeite Passwort von \"%1\"",
+    "account/edit/username": "Bearbeite Benutzernamen von \"%1\"",
+    "account/edit/email": "Bearbeite E-Mail von \"%1\"",
+    "account/following": "Nutzer, denen %1 folgt",
     "account/followers": "Nutzer, die %1 folgen",
     "account/posts": "Beiträge von %1",
     "account/topics": "Themen verfasst von %1",
@@ -32,6 +35,7 @@
     "account/favourites": "Von %1 favorisierte Beiträge",
     "account/settings": "Benutzer-Einstellungen",
     "account/watched": "Themen angeschaut von %1",
-    "maintenance.text": "%1 befindet sich derzeit in der Wartung. Bitte komm später wieder.",
-    "maintenance.messageIntro": "Zusätzlich hat der Administrator diese Nachricht hinterlassen:"
+    "maintenance.text": "%1 befindet sich derzeit in der Wartung. Bitte komme später wieder.",
+    "maintenance.messageIntro": "Zusätzlich hat der Administrator diese Nachricht hinterlassen:",
+    "throttled.text": "%1 ist momentan aufgrund von Überlastung nicht verfügbar. Bitte komm später wieder."
 }

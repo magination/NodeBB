@@ -30,7 +30,6 @@ authenticationController.register = function(req, res, next) {
 		}
 	}
 
-	var uid;
 	async.waterfall([
 		function(next) {
 			if (registrationType === 'invite-only') {
@@ -156,7 +155,7 @@ function continueLogin(req, res, next) {
 
 		// Alter user cookie depending on passed-in option
 		if (req.body.remember === 'on') {
-			var duration = 1000*60*60*24*parseInt(meta.config.loginDays || 14, 10);
+			var duration = 1000 * 60 * 60 * 24 * (parseInt(meta.config.loginDays, 10) || 14);
 			req.session.cookie.maxAge = duration;
 			req.session.cookie.expires = new Date(Date.now() + duration);
 		} else {
@@ -255,7 +254,6 @@ authenticationController.localLogin = function(req, username, password, next) {
 authenticationController.logout = function(req, res, next) {
 	if (req.user && parseInt(req.user.uid, 10) > 0 && req.sessionID) {
 		var uid = parseInt(req.user.uid, 10);
-		require('../socket.io').logoutUser(req.user.uid);
 		db.sessionStore.destroy(req.sessionID, function(err) {
 			if (err) {
 				return next(err);

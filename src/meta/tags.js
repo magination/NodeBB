@@ -17,7 +17,8 @@ module.exports = function(Meta) {
 					content: 'width=device-width, initial-scale=1.0, user-scalable=no'
 				}, {
 					name: 'content-type',
-					content: 'text/html; charset=UTF-8'
+					content: 'text/html; charset=UTF-8',
+					noEscape: true
 				}, {
 					name: 'apple-mobile-web-app-capable',
 					content: 'yes'
@@ -32,10 +33,12 @@ module.exports = function(Meta) {
 					content: Meta.config.keywords || ''
 				}, {
 					name: 'msapplication-badge',
-					content: 'frequency=30; polling-uri=' + nconf.get('url') + '/sitemap.xml'
+					content: 'frequency=30; polling-uri=' + nconf.get('url') + '/sitemap.xml',
+					noEscape: true
 				}, {
 					name: 'msapplication-square150x150logo',
-					content: Meta.config['brand:logo'] || ''
+					content: Meta.config['brand:logo'] || '',
+					noEscape: true
 				}];
 				plugins.fireHook('filter:meta.getMetaTags', defaultTags, next);
 			},
@@ -89,7 +92,10 @@ module.exports = function(Meta) {
 					return tag;
 				}
 
-				tag.content = validator.escape(tag.content);
+				if (!tag.noEscape) {
+					tag.content = validator.escape(tag.content);
+				}
+
 				return tag;
 			});
 

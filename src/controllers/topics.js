@@ -41,7 +41,6 @@ topicsController.get = function(req, res, callback) {
 			}, next);
 		},
 		function (results, next) {
-
 			if (!results.topic.slug) {
 				return callback();
 			}
@@ -72,9 +71,7 @@ topicsController.get = function(req, res, callback) {
 				reverse = false;
 
 			// `sort` qs has priority over user setting
-			if (sort === 'oldest_to_newest') {
-				reverse = false;
-			} else if (sort === 'newest_to_oldest') {
+			if (sort === 'newest_to_oldest') {
 				reverse = true;
 			} else if (sort === 'most_votes') {
 				reverse = true;
@@ -121,12 +118,17 @@ topicsController.get = function(req, res, callback) {
 					return next(err);
 				}
 
+				if (topicData.category.disabled) {
+					return callback();
+				}
+
 				topics.modifyByPrivilege(topicData.posts, results.privileges);
 
 				plugins.fireHook('filter:controllers.topic.get', topicData, next);
 			});
 		},
 		function (topicData, next) {
+
 			var breadcrumbs = [
 				{
 					text: topicData.category.name,
@@ -175,7 +177,7 @@ topicsController.get = function(req, res, callback) {
 				ogImageUrl = '/logo.png';
 			}
 
-			if (ogImageUrl.indexOf('http') === -1) {
+			if (typeof ogImageUrl === 'string' && ogImageUrl.indexOf('http') === -1) {
 				ogImageUrl = nconf.get('url') + ogImageUrl;
 			}
 
@@ -204,15 +206,18 @@ topicsController.get = function(req, res, callback) {
 				},
 				{
 					property: "og:url",
-					content: nconf.get('url') + '/topic/' + topicData.slug + (req.params.post_index ? ('/' + req.params.post_index) : '')
+					content: nconf.get('url') + '/topic/' + topicData.slug + (req.params.post_index ? ('/' + req.params.post_index) : ''),
+					noEscape: true
 				},
 				{
 					property: 'og:image',
-					content: ogImageUrl
+					content: ogImageUrl,
+					noEscape: true
 				},
 				{
 					property: "og:image:url",
-					content: ogImageUrl
+					content: ogImageUrl,
+					noEscape: true
 				},
 				{
 					property: "article:published_time",
@@ -233,10 +238,6 @@ topicsController.get = function(req, res, callback) {
 					rel: 'alternate',
 					type: 'application/rss+xml',
 					href: nconf.get('url') + '/topic/' + tid + '.rss'
-				},
-				{
-					rel: 'canonical',
-					href: nconf.get('url') + '/topic/' + topicData.slug + (currentPage > 1 ? '?page=' + currentPage : '')
 				}
 			];
 
@@ -266,6 +267,18 @@ topicsController.get = function(req, res, callback) {
 		});
 
 		topics.increaseViewCount(tid);
+
+		if (req.uid) {
+			topics.markAsRead([tid], req.uid, function(err, markedRead) {
+				if (err) {
+					return callback(err);
+				}
+				if (markedRead) {
+					topics.pushUnreadCount(req.uid);
+					topics.markTopicNotificationsRead(tid, req.uid);
+				}
+			});
+		}
 
 		plugins.fireHook('filter:topic.build', {req: req, res: res, templateData: data}, function(err, data) {
 			if (err) {
